@@ -2,13 +2,13 @@ import json
 import unittest
 import filecmp
 
-from client import servComs
+from client import ServComs
 
 
 class TestClient(unittest.TestCase):
     def setUp(self):
         serverIp = '192.168.1.79'
-        self.serverComs = servComs(serverIp)
+        self.serverComs = ServComs(serverIp)
         self.file_name = "pic1.png"
 
     def test_send_file(self):
