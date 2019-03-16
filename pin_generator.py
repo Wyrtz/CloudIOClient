@@ -6,16 +6,22 @@ class pin_gen:
 
     def __init__(self, length):
         self.length = length
+        self.pin = None
 
     def generate_pin(self, alphabet=True):
         pin = ""
         dict = string.digits
         if alphabet:
             dict += string.ascii_uppercase
-        print(dict)
         for i in range(self.length):
             pin += str(dict[random.randint(-1, len(dict)-1)])
+        self.pin = pin
         return pin
 
+    def verify_pin(self, pin):
+        return pin == self.pin
+
 gen = pin_gen(4)
-print(gen.generate_pin())
+pin = gen.generate_pin(alphabet=False)
+print(pin)
+print(gen.verify_pin(pin))
