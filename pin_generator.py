@@ -1,5 +1,6 @@
 import secrets
 import string
+from profanity import profanity
 
 
 class pin_gen:
@@ -14,6 +15,8 @@ class pin_gen:
             dict += string.ascii_uppercase
         secGen = secrets.SystemRandom()
         self.pin = "".join(secGen.sample(dict, self.length))
+        if profanity.contains_profanity(self.pin):
+            return self.generate_pin(alphabet)
         return self.pin
 
     def verify_pin(self, pin):
@@ -23,4 +26,4 @@ gen = pin_gen(4)
 pin = gen.generate_pin(alphabet=True)
 print(pin)
 print(gen.verify_pin(pin))
-print(gen.pin) # ToDo: is this a problem ?
+#print(gen.pin) # ToDo: is this a problem ?
