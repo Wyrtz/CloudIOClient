@@ -21,9 +21,3 @@ class pin_gen:
 
     def verify_pin(self, pin):
         return secrets.compare_digest(pin, self.pin)
-
-gen = pin_gen(4)
-pin = gen.generate_pin(alphabet=True)
-print(pin)
-print(gen.verify_pin(pin))
-#print(gen.pin) # ToDo: is this a problem ?
