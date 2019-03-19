@@ -42,6 +42,9 @@ class TestServercoms(unittest.TestCase):
         jsonRe = response.json()
         self.assertIn("pic1.png", jsonRe)
 
+    def test_rename_file(self):
+        pass
+
 
 if __name__ == '__main__':
     unittest.main()

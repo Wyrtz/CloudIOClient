@@ -1,17 +1,13 @@
 import os
 import time
 from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
 
 
-class MyHandler(FileSystemEventHandler):
-    def on_any_event(self, event):
-        print(f'event type: {event.event_type}  path : {event.src_path}')
 
-class folder_watch:
-    def __init__(self, path):
+class folder_watcher:
+    def __init__(self, path, handler):
         self.path = path
-        event_handler = MyHandler()
+        event_handler = handler
         observer = Observer()
         observer.schedule(event_handler, path, recursive=True)
         observer.start()

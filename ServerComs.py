@@ -7,6 +7,8 @@ class ServComs():
         self.folder = folder + '/'
 
     def send_file(self, file_name):
+        #ToDo: send as stream for big files (otherwise memory error). Tested up to 300mb works
+        #Todo: handle failed uploads
         with open(self.folder + file_name, 'rb') as file:
             response = requests.post('https://' + self.serverLocation + '/upload_file', files={'file': file}, verify=False)
         return response
