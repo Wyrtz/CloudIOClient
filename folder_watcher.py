@@ -1,11 +1,12 @@
-import os
 import time
 from watchdog.observers import Observer
 
 
-
 class folder_watcher:
+    """Watches a folder."""
+
     def __init__(self, path, handler):
+        """Initialise the folder_watcher with what folder to watch, and who to call (handle) when an event occures"""
         self.path = path
         event_handler = handler
         observer = Observer()
@@ -18,9 +19,4 @@ class folder_watcher:
             observer.stop()
         observer.join()
 
-    def get_folder_list(self):
-        files = os.listdir(self.path)
-        file_list = []
-        for name in files:
-            file_list.append(name)
-        return file_list
+

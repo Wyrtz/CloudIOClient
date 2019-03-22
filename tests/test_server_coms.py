@@ -6,7 +6,7 @@ from ServerComs import ServComs
 
 class TestServercoms(unittest.TestCase):
     def setUp(self):
-        self.serverIp = '10.192.0.184'
+        self.serverIp = 'wyrnas.myqnapcloud.com:8000'
         self.folder = '../files'
         # ../ files / pic1.png
         self.serverComs = ServComs(self.serverIp, self.folder)
