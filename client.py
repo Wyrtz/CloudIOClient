@@ -3,6 +3,7 @@ from threading import Thread
 from time import sleep
 from watchdog.events import FileSystemEventHandler
 from ServerComs import ServComs
+from file_cryptography import file_cryptography
 from folder_watcher import folder_watcher
 
 
@@ -11,8 +12,9 @@ class MyHandler(FileSystemEventHandler):
     """Custom Handling FileSystemEvents"""
     #ToDo: handle creations properly.
 
-    def __init__(self, servercoms):
+    def __init__(self, servercoms, file_crypt):
         self.servercoms = servercoms
+        self.file_crypt = file_crypt
 
     def on_any_event(self, event):
         """Print any received event to console"""
@@ -23,25 +25,31 @@ class MyHandler(FileSystemEventHandler):
         file_name = event.src_path.split("/")[1]
         response = None
         try:
-            response = self.servercoms.send_file(file_name)
+            enc_file_name = self.file_crypt.encrypt_file(file_name)
+            response = self.servercoms.send_file(enc_file_name)
         except PermissionError:
             print("failed once")
             sleep(5)
             self.on_created(event)
         if response:
             print(response)
+        else:
+            print("empty response ?")
+        # if response.status_code == "200":
+        #     os.remove(enc_file_name)
 
 class client():
 
-    def __init__(self, serverIP, folder):
+    def __init__(self, serverIP, folder="files"):
         self.serverIP = serverIP
         self.folder = folder
-        self.servercoms = ServComs(serverIP, folder)
-        self.handler = MyHandler(self.servercoms)
+        self.servercoms = ServComs(serverIP)
+        self.file_crypt = file_cryptography(self.folder)
+        self.handler = MyHandler(self.servercoms, self.file_crypt)
         folder_watcher_thread = Thread(target=folder_watcher, args=(folder + "/", self.handler))
         folder_watcher_thread.start()
         #self.folder_watcher = folder_watcher(folder + "/", self.handler)
-        self.sync_files()
+        #self.sync_files()
 
     def get_folder_list(self):
         """Return a list where each element is the string name of this file"""
@@ -69,6 +77,5 @@ class client():
 
 if __name__ == "__main__":
     serverIP = 'wyrnas.myqnapcloud.com:8000'
-    folder = 'files'
-    client = client(serverIP, folder)
+    client = client(serverIP)
 

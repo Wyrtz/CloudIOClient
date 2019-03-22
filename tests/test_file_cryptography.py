@@ -8,7 +8,7 @@ from file_cryptography import file_cryptography
 class test_file_cryptography(unittest.TestCase):
     def setUp(self):
         self.folder = '../files_for_testing'
-        self.file_crypt = file_cryptography(folder=self.folder)
+        self.file_crypt = file_cryptography(file_folder=self.folder)
 
     def test_encrypt_decrypt(self):
         file_name = "client.txt"
