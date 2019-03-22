@@ -41,7 +41,7 @@ class client():
         folder_watcher_thread = Thread(target=folder_watcher, args=(folder + "/", self.handler))
         folder_watcher_thread.start()
         #self.folder_watcher = folder_watcher(folder + "/", self.handler)
-        #self.sync_files()
+        self.sync_files()
 
     def get_folder_list(self):
         """Return a list where each element is the string name of this file"""

@@ -11,7 +11,9 @@ class file_cryptography:
         self.aesgcm = AESGCM(key=self.key)
 
     def encrypt_file(self, file_name):
-        enc_file_name = file_name + ".cio"
+        #ToDo: what is "assosiacted data ?
+        enc_file_name = self.aesgcm.encrypt(self.salt, file_name.encode('utf-8'), associated_data=None)
+        enc_file_name = enc_file_name.hex() + ".cio"
         with open(self.folder + file_name, 'rb') as file:
             enc_file_data = self.aesgcm.encrypt(self.salt, file.read(), associated_data=None)
             with open(self.folder + enc_file_name, "wb+") as enc_file:
@@ -19,9 +21,14 @@ class file_cryptography:
         return enc_file_name
 
     def decrypt_file(self, file_name):
-        dec_file_name = file_name.rsplit(".", 1)[0]
+        fragmented_file_name = file_name.split(".")
+        if fragmented_file_name[1].lower() != "cio":
+            raise TypeError
+        byte_file_name = bytes.fromhex(fragmented_file_name[0])
+        dec_file_name = self.aesgcm.decrypt(self.salt, byte_file_name, associated_data=None).decode('utf-8')
+
         with open(self.folder + file_name, 'rb') as file:
-            dec_file_data = self.aesgcm.decrypt(self.salt,file.read(), associated_data=None)
+            dec_file_data = self.aesgcm.decrypt(self.salt, file.read(), associated_data=None)
             already_exists = os.path.isfile(self.folder + dec_file_name)
             # if already_exists:        #ToDo: handle same file name
             #     fragments = dec_file_name.split(".")

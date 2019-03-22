@@ -30,7 +30,5 @@ class test_file_cryptography(unittest.TestCase):
         self.assertRaises(cryptography.exceptions.InvalidTag, self.file_crypt.decrypt_file, file_encrypted)
 
 
-
-
 if __name__ == '__main__':
     unittest.main()
