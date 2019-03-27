@@ -2,15 +2,17 @@ import unittest
 import os
 
 from ServerComs import ServComs
+from file_cryptography import file_cryptography
 
 
 class TestServercoms(unittest.TestCase):
     def setUp(self):
         self.serverIp = 'wyrnas.myqnapcloud.com:8000'
-        self.folder = '../files'
+        self.folder = '../files_for_testing'
         # ../ files / pic1.png
-        self.serverComs = ServComs(self.serverIp, self.folder)
+        self.serverComs = ServComs(self.serverIp)
         self.file_name = "pic1.png"
+        self.enc = file_cryptography(self.folder)
 
     def test_send_file(self):
         file_name = self.file_name
@@ -19,10 +21,11 @@ class TestServercoms(unittest.TestCase):
         self.assertEqual(response.status_code, 200, "Tried to send file " + file_name)
 
     def test_receive_send_file(self):
-        #Send file
+        #Send (encrypted) file
         file_name = self.file_name
         file_path = self.folder + "/" + file_name
         send_file_size = os.stat(file_path).st_size
+        enc_file_name = self.enc.encrypt_file(self.file_name)
         response = self.serverComs.send_file(file_name)
         self.assertNotIsInstance(response, type(None), "Got no response back!")
         self.assertEqual(response.status_code, 200, "Tried to send file " + file_name)
