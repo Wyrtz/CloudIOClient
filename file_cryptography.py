@@ -13,8 +13,10 @@ class file_cryptography:
         self.aesgcm = AESGCM(key=self.key)
 
     def encrypt_file(self, file_path):
-        """Encrypt file_name and return name of the encrypted file"""
+        """Encrypt file_path and return path of the encrypted file"""
         #ToDo: what is "assosiacted data ?
+        print("key:", self.key)
+        print("salt:", self.salt)
         enc_file_name = self.aesgcm.encrypt(self.salt, file_path.encode('utf-8'), associated_data=None)
         enc_file_name = os.path.join(globals.TEMPORARY_FOLDER, enc_file_name.hex()) + ".cio"
         with open(file_path, 'rb') as file:
@@ -35,12 +37,9 @@ class file_cryptography:
 
         with open(file_path, 'rb') as file:
             dec_file_data = self.aesgcm.decrypt(self.salt, file.read(), associated_data=None)
-            #already_exists = os.path.isfile(self.folder + dec_file_name)
-            # if already_exists:        #ToDo: handle same file name
-            #     fragments = dec_file_name.split(".")
-            #     dec_file_name = fragments[0] + "1." + fragments[1]
-            with open(os.path.join(globals.TEMPORARY_FOLDER, dec_file_name), "wb+") as dec_file:
+            with open(os.path.join(globals.FILE_FOLDER, dec_file_name), "wb+") as dec_file:
                 dec_file.write(dec_file_data)
+        globals.DOWNLOADED_FILE_QUEUE.append(dec_file_name)
         return dec_file_name
 
     def safe_stuff(self):
@@ -54,14 +53,17 @@ class file_cryptography:
 
     def get_secrets(self):
         #ToDo: Save in plaintext ?
-        key_exists = os.path.isfile('key.key')
-        salt_exists = os.path.isfile('salt.salt')
+        key_path = os.path.join(globals.WORK_DIR, 'key.key')
+        salt_path = os.path.join(globals.WORK_DIR, 'salt.salt')
+        key_exists = os.path.isfile(key_path)
+        salt_exists = os.path.isfile(salt_path)
         if key_exists and salt_exists:
-            with open('key.key', "rb") as file:
+            with open(key_path, "rb") as file:
                 self.key = file.read()
-            with open('salt.salt', 'rb') as file:
+            with open(salt_path, 'rb') as file:
                 self.salt = file.read()
-            self.safe_stuff()
         else:
+            print(key_path)
             self.key = AESGCM.generate_key(bit_length=256)
             self.salt = bytes(secrets.token_hex(12), 'utf-8')
+            self.safe_stuff()

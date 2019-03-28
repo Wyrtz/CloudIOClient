@@ -19,7 +19,8 @@ class ServComs():
 
     def get_file(self, file_path):
         """Retrive file_name from server and place it in tmp (ready for decryption)"""
-        response = requests.get('https://' + self.serverLocation + '/get_file/' + file_path, verify=self.verify)
+        file_name = file_path.split("\\")[-1]
+        response = requests.get('https://' + self.serverLocation + '/get_file/' + file_name, verify=self.verify)
         with open(file_path, "wb") as saveFile:
             saveFile.write(response.content)
         return response

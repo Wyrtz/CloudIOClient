@@ -5,6 +5,7 @@ from watchdog.events import FileSystemEventHandler
 from ServerComs import ServComs
 from file_cryptography import file_cryptography
 from folder_watcher import folder_watcher
+from globals import globals
 
 
 
@@ -24,6 +25,9 @@ class MyHandler(FileSystemEventHandler):
         """Send newly created file to the server"""
         file_name = event.src_path.split("/")[1]
         response = None
+        if file_name in globals.DOWNLOADED_FILE_QUEUE:
+            globals.DOWNLOADED_FILE_QUEUE.remove(file_name)
+            pass
         try:
             enc_file_name = self.file_crypt.encrypt_file(file_name)
             response = self.servercoms.send_file(enc_file_name)

@@ -14,10 +14,10 @@ def get_ClaudIOClient_path():
 
 
 class globals():
-    PROJECT_NAME = "ClaudIOClient"
+    PROJECT_NAME = PROJECT_NAME
     WORK_DIR = get_ClaudIOClient_path()
     TEST_FOLDER = os.path.join(WORK_DIR, "tests")
     TEST_FILE_FOLDER = os.path.join(WORK_DIR, "files_for_testing")
     FILE_FOLDER = os.path.join(WORK_DIR, "files")
     TEMPORARY_FOLDER = os.path.join(WORK_DIR, "tmp")
-
+    DOWNLOADED_FILE_QUEUE = []
