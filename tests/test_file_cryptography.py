@@ -30,15 +30,11 @@ class test_file_cryptography(unittest.TestCase):
             file.write(b'hejjj')
         self.assertRaises(cryptography.exceptions.InvalidTag, self.file_crypt.decrypt_file, file_encrypted)
 
-    # def test_key_and_salt_saved(self):
-    #     og_salt = self.file_crypt.salt
-    #     og_key = self.file_crypt.key
-    #     file_crypt = file_cryptography()
-    #     new_salt = file_crypt.salt
-    #     new_key = file_crypt.key
-    #     self.assertEqual(og_salt, new_salt, "Salt changed!")
-    #     self.assertEqual(og_key, new_key, "key changed!")
-
-
-if __name__ == '__main__':
-    unittest.main()
+    def test_key_and_salt_saved(self):
+        og_salt = self.file_crypt.salt
+        og_key = self.file_crypt.key
+        file_crypt = file_cryptography()
+        new_salt = file_crypt.salt
+        new_key = file_crypt.key
+        self.assertEqual(og_salt, new_salt, "Salt changed!")
+        self.assertEqual(og_key, new_key, "key changed!")

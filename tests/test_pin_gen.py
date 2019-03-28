@@ -16,7 +16,3 @@ class TestServercoms(unittest.TestCase):
         pin = self.pin_gen.generate_pin(alphabet=False)
         alp = string.ascii_uppercase
         self.assertEqual(alp in pin, False, "Letters in pin " + pin)
-
-
-if __name__ == '__main__':
-    unittest.main()

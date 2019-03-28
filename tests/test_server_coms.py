@@ -53,7 +53,3 @@ class TestServercoms(unittest.TestCase):
         self.assertNotIsInstance(response, type(None), "Got no response back!")
         self.assertEqual(response.status_code, 200, "Tried to send file " + self.file_name)
         return enc_file_path
-
-
-if __name__ == '__main__':
-    unittest.main()
