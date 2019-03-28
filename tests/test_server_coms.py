@@ -22,7 +22,7 @@ class TestServercoms(unittest.TestCase):
         send_file_size = os.stat(self.file_path).st_size
         enc_file_path = self.send_file()
         # Get it back
-        response = self.serverComs.get_file(enc_file_path)
+        response, _ = self.serverComs.get_file(enc_file_path)
         self.assertNotIsInstance(response, type(None), "Got no response back!")
         self.assertEqual(response.status_code, 200, "Tried to recieve file " + self.file_name)
         dec_file_path = self.enc.decrypt_file(enc_file_path)
@@ -42,10 +42,6 @@ class TestServercoms(unittest.TestCase):
         jsonRe = response.json()
         file_list = jsonRe["file_list"]
         self.assertIn(enc_file_name, file_list, "File not on the server!")
-
-
-    # def test_rename_file(self):
-    #     pass
 
     def send_file(self):
         enc_file_path = self.enc.encrypt_file(self.file_path)

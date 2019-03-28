@@ -34,13 +34,14 @@ class file_cryptography:
         fragmented_file_name = fragmented_file_name[0].split("\\")
         byte_file_name = bytes.fromhex(fragmented_file_name[-1])
         dec_file_name = self.aesgcm.decrypt(self.salt, byte_file_name, associated_data=None).decode('utf-8')
+        dec_file_path = os.path.join(globals.FILE_FOLDER, dec_file_name)
 
         with open(file_path, 'rb') as file:
             dec_file_data = self.aesgcm.decrypt(self.salt, file.read(), associated_data=None)
-            with open(os.path.join(globals.FILE_FOLDER, dec_file_name), "wb+") as dec_file:
+            with open(dec_file_path, "wb+") as dec_file:
                 dec_file.write(dec_file_data)
         globals.DOWNLOADED_FILE_QUEUE.append(dec_file_name)
-        return dec_file_name
+        return dec_file_path
 
     def safe_secrets(self):
         file = open(self.key_path, 'wb')

@@ -25,22 +25,31 @@ class MyHandler(FileSystemEventHandler):
         """Send newly created file to the server"""
         file_name = event.src_path.split("/")[1]
         response = None
-        if file_name in globals.DOWNLOADED_FILE_QUEUE:
-            globals.DOWNLOADED_FILE_QUEUE.remove(file_name)
-            pass
+        enc_file_name = ""
+        file_path = os.path.join(globals.FILE_FOLDER, file_name)
+        if file_path in globals.DOWNLOADED_FILE_QUEUE:
+            globals.DOWNLOADED_FILE_QUEUE.remove(file_path)
+            print("Removed ", file_path, "from queue")
+            return
         try:
-            enc_file_name = self.file_crypt.encrypt_file(file_name)
+            enc_file_name = self.file_crypt.encrypt_file(file_path)
             response = self.servercoms.send_file(enc_file_name)
         except PermissionError:
             print("failed once")
             sleep(5)
             self.on_created(event)
-        if response:
-            print(response)
-        else:
-            print("empty response ?")
-        # if response.status_code == "200":
-        #     os.remove(enc_file_name)
+            return
+        if response.status_code == 200:
+            os.remove(enc_file_name)
+        # print("Send file")
+        # sleep(3)
+        # print("Delete file")
+        # os.remove(file_path)
+        # sleep(3)
+        # print("Get file")
+        # _, enc_file_path = self.servercoms.get_file(enc_file_name)
+        # dec_file_path = self.file_crypt.decrypt_file(enc_file_path)
+
 
 class client():
 
@@ -48,7 +57,7 @@ class client():
         self.serverIP = serverIP
         self.folder = folder
         self.servercoms = ServComs(serverIP)
-        self.file_crypt = file_cryptography(self.folder)
+        self.file_crypt = file_cryptography()
         self.handler = MyHandler(self.servercoms, self.file_crypt)
         folder_watcher_thread = Thread(target=folder_watcher, args=(folder + "/", self.handler))
         folder_watcher_thread.start()
@@ -77,6 +86,12 @@ class client():
         #todo: FINNISH THIS!
         #todo: Test this!
         #todo: handle file not found, no connection etc. !
+
+    def get_file(self, enc_file_name):
+        _, enc_file_path = self.servercoms.get_file(enc_file_name)
+        dec_file_path = self.file_crypt.decrypt_file(enc_file_path)
+        os.remove(enc_file_path)
+
 
 
 if __name__ == "__main__":
