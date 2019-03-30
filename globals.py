@@ -25,7 +25,7 @@ TEST_FILE_FOLDER = os.path.join(WORK_DIR, "files_for_testing")
 FILE_FOLDER = os.path.join(WORK_DIR, "files")
 TEMPORARY_FOLDER = os.path.join(WORK_DIR, "tmp")
 create_folders()
-DOWNLOADED_FILE_QUEUE = []
+DOWNLOADED_FILE_QUEUE = []  # TODO: Make thread safe
 
 def clear_tmp():
     for file in os.listdir(TEMPORARY_FOLDER):

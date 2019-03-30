@@ -5,8 +5,7 @@ from watchdog.events import FileSystemEventHandler
 from ServerComs import ServComs
 from file_cryptography import file_cryptography
 from folder_watcher import folder_watcher
-from globals import globals
-
+import globals
 
 
 class MyHandler(FileSystemEventHandler):

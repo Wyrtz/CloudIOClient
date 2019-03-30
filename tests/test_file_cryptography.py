@@ -18,17 +18,19 @@ class test_file_cryptography(unittest.TestCase):
         end_file = ""
         with open(self.file_path, "rt") as file:
             start_file = file.read()
-        file_encrypted = self.file_crypt.encrypt_file(file_path=self.file_path)
-        file_decrypted = self.file_crypt.decrypt_file(file_path=file_encrypted)
+        file_encrypted, additional_data = self.file_crypt.encrypt_file(file_path=self.file_path)
+        file_decrypted = self.file_crypt.decrypt_file(file_path=file_encrypted, additional_data=additional_data)
         with open(file_decrypted, "rt") as file:
            end_file = file.read()
         self.assertEqual(start_file, end_file, "Files differ!")
 
     def test_invalid_tag(self):
-        file_encrypted = self.file_crypt.encrypt_file(file_path=self.file_path)
+        file_encrypted, additional_data = self.file_crypt.encrypt_file(file_path=self.file_path)
         with open(file_encrypted, "ab") as file:
             file.write(b'hejjj')
-        self.assertRaises(cryptography.exceptions.InvalidTag, self.file_crypt.decrypt_file, file_encrypted)
+        self.assertRaises(cryptography.exceptions.InvalidTag,
+                          self.file_crypt.decrypt_file,
+                          file_encrypted, additional_data)
 
     def test_key_and_salt_saved(self):
         og_salt = self.file_crypt.salt
