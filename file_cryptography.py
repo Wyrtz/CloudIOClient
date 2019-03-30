@@ -2,7 +2,7 @@ import os
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 import secrets
-from globals import globals
+import globals
 
 class file_cryptography:
 

@@ -1,7 +1,7 @@
 import os
 import requests
 
-from globals import globals
+import globals
 
 
 class ServComs():

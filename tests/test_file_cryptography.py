@@ -4,7 +4,7 @@ import cryptography
 import unittest
 
 from file_cryptography import file_cryptography
-from globals import globals
+import globals
 
 
 class test_file_cryptography(unittest.TestCase):
@@ -38,3 +38,6 @@ class test_file_cryptography(unittest.TestCase):
         new_key = file_crypt.key
         self.assertEqual(og_salt, new_salt, "Salt changed!")
         self.assertEqual(og_key, new_key, "key changed!")
+
+    def tearDown(self) -> None:
+        globals.clear_tmp()

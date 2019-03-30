@@ -3,14 +3,14 @@ import os
 
 from ServerComs import ServComs
 from file_cryptography import file_cryptography
-from globals import globals
+import globals
 
 
 class TestServercoms(unittest.TestCase):
     def setUp(self):
         self.serverIp = 'wyrnas.myqnapcloud.com:8000'
         self.serverComs = ServComs(self.serverIp)
-        self.file_name = "pic1.png"
+        self.file_name = "pic1.jpg"
         self.file_path = os.path.join(globals.TEST_FILE_FOLDER, self.file_name)
         self.enc = file_cryptography()
 
@@ -49,3 +49,6 @@ class TestServercoms(unittest.TestCase):
         self.assertNotIsInstance(response, type(None), "Got no response back!")
         self.assertEqual(response.status_code, 200, "Tried to send file " + self.file_name)
         return enc_file_path
+
+    def tearDown(self):
+        globals.clear_tmp()
