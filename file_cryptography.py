@@ -1,5 +1,6 @@
 import json
 import os
+import platform
 import time
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
@@ -29,8 +30,12 @@ class file_cryptography:
         with open(file_path, 'rb') as file:
             enc_file_data = self.aesgcm.encrypt(self.salt, file.read(),
                                                 associated_data=bytes(additional_data, 'utf-8'))
-            with open(enc_file_path, "wb") as enc_file:
-                enc_file.write(enc_file_data)
+            try:
+                with open(enc_file_path, "wb") as enc_file:
+                    enc_file.write(enc_file_data)
+            except FileNotFoundError:
+                if platform.system() == "Windows" and len(enc_file_path) > 260:
+                    print("Please enable NTFS long paths in your system.(Filesystem Registry entry)")
         return enc_file_path, additional_data
 
     def decrypt_file(self, file_path, additional_data):
@@ -40,6 +45,7 @@ class file_cryptography:
         if fragmented_file_name[1].lower() != "cio":
             raise TypeError
         fragmented_file_name = fragmented_file_name[0].split("/")
+        fragmented_file_name = fragmented_file_name[0].split("\\")
         byte_file_name = bytes.fromhex(fragmented_file_name[-1])
         dec_file_name = self.aesgcm.decrypt(self.salt, byte_file_name, associated_data=None).decode('utf-8')
         dec_file_path = os.path.join(globals.FILE_FOLDER, dec_file_name)

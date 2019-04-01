@@ -26,7 +26,7 @@ class TestServercoms(unittest.TestCase):
         self.assertNotIsInstance(response, type(None), "Got no response back!")
         self.assertEqual(response.status_code, 200, "Tried to recieve file " + self.file_name)
         dec_file_path = self.enc.decrypt_file(enc_file_path, additional_data)
-        # Make sure the file we got back has the same conten as the one we send (aproxx)
+        # Make sure the file we got back has the same content as the one we send (aproxx)
         recv_file_size = os.stat(dec_file_path).st_size
         self.assertEqual(send_file_size, recv_file_size, "Files differs in size!")
 
