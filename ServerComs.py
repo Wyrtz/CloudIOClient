@@ -18,8 +18,7 @@ class ServComs():
         # ToDo: send as stream for big files (otherwise memory error). Tested up to 300mb works
         with open(file_path, 'rb') as file:
             response = requests.post('https://' + self.serverLocation + '/upload_file',
-                                     files={'file': file},
-                                     data=additional_data,
+                                     files={'file': file, 'additional_data': additional_data},
                                      verify=self.verify)
         return response
 
@@ -32,7 +31,7 @@ class ServComs():
         response = requests.get('https://' + self.serverLocation + '/get_file/' + file_name, verify=self.verify)
         with open(tmp_file_location, "wb") as saveFile:
             saveFile.write(response.content)
-        return response, tmp_file_location, response.text
+        return response, tmp_file_location
 
     def get_file_list(self):
         """Get a list of what files the server has"""
