@@ -31,8 +31,8 @@ class MyHandler(FileSystemEventHandler):
             print("Removed ", file_path, "from queue")
             return
         try:
-            enc_file_name = self.file_crypt.encrypt_file(file_path)
-            response = self.servercoms.send_file(enc_file_name)
+            enc_file_name, additional_data = self.file_crypt.encrypt_file(file_path)
+            response = self.servercoms.send_file(enc_file_name, additional_data)
         except PermissionError:
             print("failed once")
             sleep(5)
@@ -87,8 +87,8 @@ class client():
         #todo: handle file not found, no connection etc. !
 
     def get_file(self, enc_file_name):
-        _, enc_file_path = self.servercoms.get_file(enc_file_name)
-        dec_file_path = self.file_crypt.decrypt_file(enc_file_path)
+        _, enc_file_path, additional_data = self.servercoms.get_file(enc_file_name)
+        dec_file_path = self.file_crypt.decrypt_file(enc_file_path, additional_data=additional_data)
         os.remove(enc_file_path)
 
 
