@@ -23,15 +23,15 @@ class file_cryptography:
             self.salt, file_path.encode('utf-8'),
             associated_data=None)  # Name is valid on its own.
         curr_time = time.time()
-        additional_data = json.dumps({'t': curr_time, 'n': enc_file_name.hex()})
-        # Reusing enc_file_name? y u no enc_file_path?
-        enc_file_name = os.path.join(globals.TEMPORARY_FOLDER, enc_file_name.hex()) + ".cio"
+        enc_file_name = enc_file_name.hex() + ".cio"
+        additional_data = json.dumps({'t': curr_time, 'n': enc_file_name})
+        enc_file_path = os.path.join(globals.TEMPORARY_FOLDER, enc_file_name)
         with open(file_path, 'rb') as file:
             enc_file_data = self.aesgcm.encrypt(self.salt, file.read(),
                                                 associated_data=bytes(additional_data, 'utf-8'))
-            with open(enc_file_name, "wb") as enc_file:
+            with open(enc_file_path, "wb") as enc_file:
                 enc_file.write(enc_file_data)
-        return enc_file_name, additional_data  # We need the curr_time of encryption to be stored along with the file.
+        return enc_file_path, additional_data
 
     def decrypt_file(self, file_path, additional_data):
         """Decrypt file_name and return name of the decrypted file"""

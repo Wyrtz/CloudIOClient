@@ -27,6 +27,7 @@ class ServComs():
         # ToDo: does server even have the file ? (otherwise empty file)
         """Retrive file_name from server and place it in tmp (ready for decryption)"""
         file_name = file_path.split("\\")[-1]
+        file_name = file_path.split("/")[-1]
         tmp_file_location = os.path.join(globals.TEMPORARY_FOLDER, file_name)
         response = requests.get('https://' + self.serverLocation + '/get_file/' + file_name, verify=self.verify)
         with open(tmp_file_location, "wb") as saveFile:
