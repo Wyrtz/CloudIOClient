@@ -2,52 +2,50 @@ import unittest
 import os
 
 from ServerComs import ServComs
-from file_cryptography import file_cryptography
+from filecryptography import FileCryptography
 import globals
 
 
 class TestServercoms(unittest.TestCase):
+
     def setUp(self):
-        self.serverIp = 'wyrnas.myqnapcloud.com:8000'
+        globals.TESTING = True
+        path = os.path.join(os.getcwd(), "..")
+        self.serverIp = '127.0.0.1:443'
         self.serverComs = ServComs(self.serverIp)
         self.file_name = "pic1.jpg"
-        self.file_path = os.path.join(globals.TEST_FILE_FOLDER, self.file_name)
-        self.enc = file_cryptography()
+        globals.TEMPORARY_FOLDER = os.path.join(path, "tmp")
+        globals.FILE_FOLDER = os.path.join(path, "files_for_testing")
+        globals.create_folders()
+        self.enc = FileCryptography()
 
     def test_send_file(self):
         self.send_file()
 
-    def test_receive_send_file(self):
-        # Send (encrypted) file
-        send_file_size = os.stat(self.file_path).st_size
-        enc_file_path, additional_data = self.send_file()
-        # Get it back
-        response, _ = self.serverComs.get_file(enc_file_path)
-        self.assertNotIsInstance(response, type(None), "Got no response back!")
-        self.assertEqual(response.status_code, 200, "Tried to recieve file " + self.file_name)
-        dec_file_path = self.enc.decrypt_file(enc_file_path, additional_data)
-        # Make sure the file we got back has the same content as the one we send (aproxx)
-        recv_file_size = os.stat(dec_file_path).st_size
-        self.assertEqual(send_file_size, recv_file_size, "Files differs in size!")
-
-
-    def test_get_file_list(self):
-        #Send file
+    def test_uploaded_file_in_file_list(self):
+        # Send file
         enc_file_path, additional_data = self.send_file()
         enc_file_name = enc_file_path.split("\\")[-1]
-        #Get list back from server, and see if it is there
-        response = self.serverComs.get_file_list()
-        self.assertNotIsInstance(response, type(None), "Got no response back!")
-        self.assertEqual(response.status_code, 200)
-        jsonRe = response.json()
-        file_list = jsonRe["file_list"]
+        enc_file_name = enc_file_name.split("/")[-1]
+        # Get list back from server, and see if it is there
+        file_list = self.serverComs.get_file_list()
         self.assertIn(enc_file_name, file_list, "File not on the server!")
 
+    def test_receive_send_file(self):
+        with open(os.path.join(globals.FILE_FOLDER, self.file_name), 'rb') as file:
+            file_content = file.read()
+        enc_file_name = self.enc.encrypt_filename(self.file_name)
+        _, additional_data_local = self.send_file()
+        tmp_file_location, additional_data_received = self.serverComs.get_file(enc_file_name)
+        self.assertTrue(additional_data_local == additional_data_received, "Additional data has changed during upload.")
+        dec_file_path = self.enc.decrypt_file(tmp_file_location, additional_data_received)
+        with open(dec_file_path, 'rb') as file:
+            received_content = file.read()
+        self.assertEqual(file_content, received_content, "Files differ!")
+
     def send_file(self):
-        enc_file_path, additional_data = self.enc.encrypt_file(self.file_path)
-        response = self.serverComs.send_file(enc_file_path, additional_data)
-        self.assertNotIsInstance(response, type(None), "Got no response back!")
-        self.assertEqual(response.status_code, 200, "Tried to send file " + self.file_name)
+        enc_file_path, additional_data = self.enc.encrypt_file(self.file_name)
+        self.serverComs.send_file(enc_file_path, additional_data)
         return enc_file_path, additional_data
 
     def tearDown(self):
