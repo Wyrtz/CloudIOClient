@@ -97,6 +97,7 @@ class Client:
         # todo: Test this!
         # todo: handle file not found, no connection etc. !
 
+    # ToDo: make 'close_client' function, such that tests (and later user) can close client after use
 
 if __name__ == "__main__":
     serverIP = 'wyrnas.myqnapcloud.com:8000'

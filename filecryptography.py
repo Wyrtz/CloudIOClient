@@ -40,6 +40,10 @@ class FileCryptography:
                     print("Please enable NTFS long paths in your system.(Filesystem Registry entry)")
         return enc_file_path, additional_data
 
+    def decrypt_relative_file_path(self, enc_file_name: pl.Path):
+        enc_file_name = bytes.fromhex(str(enc_file_name.stem))
+        return self.aesgcm.decrypt(self.salt, enc_file_name, associated_data=None)
+
     def decrypt_file(self, file_path, additional_data):
         """Decrypt file_name and return name of the decrypted file"""
         # ToDo: Placing file in files will result in watchdog re-uploading it...
@@ -56,6 +60,13 @@ class FileCryptography:
                 dec_file.write(dec_file_data)
         globals.DOWNLOADED_FILE_QUEUE.append(dec_file_name)
         return dec_file_path
+
+    def decrypt_file_list(self, enc_file_name_list: list):
+        dec_file_name_list = []
+        for file in enc_file_name_list:
+            dec_file_name = self.decrypt_relative_file_path(pl.Path(file))
+            dec_file_name_list.append(str(dec_file_name, 'utf-8'))
+        return dec_file_name_list
 
     def safe_secrets(self):
         file = open(self.key_path, 'wb')

@@ -54,6 +54,7 @@ class ServComs():
             raise FileNotFoundError  # TODO: Replace this error?
         if 'file_list' not in response_dict.keys():
             raise FileNotFoundError  # TODO: Replace this error?
+        enc_file_list = response_dict['file_list']
         return response_dict['file_list']
 
     # Todo: rename file: Send delete file request (and send the renamed file)

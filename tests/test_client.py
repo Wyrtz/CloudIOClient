@@ -1,16 +1,27 @@
 import unittest
-from client import client
+import pathlib as pl
+import globals
+from client import Client
 
 
 class TestClient(unittest.TestCase):
 
     def setUp(self):
-        self.client = client()
+        self.client = Client()
+        self.file_name = "pic1.jpg"
+        self.file_path = pl.Path.joinpath(globals.TEST_FILE_FOLDER, self.file_name)
+        self.relative_file_path = self.file_path.relative_to(globals.WORK_DIR)
 
     def test_created_file_is_uploaded(self):
         # Get file list from server, check file is not there already
-        start_file_list = client.servercoms.get_file_list()
-        print(start_file_list)
+        start_file_list_enc = self.client.servercoms.get_file_list()
+        start_file_list_dec = self.client.file_crypt.decrypt_file_list(start_file_list_enc)
+
+        print(start_file_list_dec)
+        print(self.relative_file_path)
+        print(self.relative_file_path in start_file_list_dec)
+        # print(start_file_list_enc)
+
         # Create file
         # Get file list from server, check the file is now there
 
