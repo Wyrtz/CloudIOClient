@@ -41,7 +41,7 @@ class MyHandler(FileSystemEventHandler):
             self.on_created(event)
             return
         if response.status_code == 200:
-            pl.Path.unlink(enc_file_name) # Delete file
+            pl.Path.unlink(enc_file_name)  # Delete file
         # print("Send file")
         # sleep(3)
         # print("Delete file")
@@ -51,13 +51,12 @@ class MyHandler(FileSystemEventHandler):
         # _, enc_file_path = self.servercoms.get_file(enc_file_name)
         # dec_file_path = self.file_crypt.decrypt_file(enc_file_path)
 
-
 class client():
 
-    def __init__(self, serverIP, file_folder=globals.FILE_FOLDER):
-        self.serverIP = serverIP
+    def __init__(self, server_location=globals.SERVER_LOCATION, file_folder=globals.FILE_FOLDER):
+        self.server_location = server_location
         self.file_folder = file_folder
-        self.servercoms = ServComs(serverIP)
+        self.servercoms = ServComs(server_location)
         self.file_crypt = FileCryptography()
         self.handler = MyHandler(self.servercoms, self.file_crypt)
         folder_watcher_thread = Thread(target=folder_watcher, args=(file_folder, self.handler))
