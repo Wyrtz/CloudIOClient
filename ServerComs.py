@@ -1,5 +1,6 @@
 import json
 import os
+import pathlib as pl
 from json import JSONDecodeError
 
 import requests
@@ -24,8 +25,7 @@ class ServComs():
                                      files={'file_content': file,
                                             'additional_data': bytes(json.dumps(additional_data), 'utf-8')},
                                      verify=self.verify)
-        if response.status_code != 200:
-            raise FileNotFoundError  # TODO: Replace this error.
+            response.raise_for_status()
 
     def get_file(self, enc_file_name):
         """Retrive enc_file_name from server and place it in tmp (ready for decryption)"""
@@ -39,7 +39,7 @@ class ServComs():
             raise FileNotFoundError  # Bad JSON?
         if 'file' not in response_dict.keys() or 'additional_data' not in response_dict.keys():
             raise FileNotFoundError  # If the server provides garbage we throw it in the trash.
-        tmp_file_location = os.path.join(globals.TEMPORARY_FOLDER, enc_file_name)
+        tmp_file_location = pl.PurePath.joinpath(globals.TEMPORARY_FOLDER, enc_file_name)
         with open(tmp_file_location, "wb") as saveFile:  # Assume it's the file we requested.
             saveFile.write(bytes.fromhex(response_dict['file']))
         return tmp_file_location, response_dict['additional_data']
@@ -47,8 +47,7 @@ class ServComs():
     def get_file_list(self):
         """Get a list of what files the server has"""
         response = requests.get('https://' + self.serverLocation + '/list_files', verify=self.verify)
-        if response.status_code != 200:
-            raise FileNotFoundError  # TODO: Replace this error? I suggest ServerError
+        response.raise_for_status()
         try:
             response_dict = json.loads(response.content)
         except JSONDecodeError:
@@ -56,3 +55,6 @@ class ServComs():
         if 'file_list' not in response_dict.keys():
             raise FileNotFoundError  # TODO: Replace this error?
         return response_dict['file_list']
+
+    # Todo: rename file: Send delete file request (and send the renamed file)
+    # Todo: delete file

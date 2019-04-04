@@ -1,4 +1,5 @@
 import os
+import pathlib as pl
 
 import cryptography
 import unittest
@@ -9,28 +10,23 @@ import globals
 
 class test_file_cryptography(unittest.TestCase):
     def setUp(self):
-        globals.TESTING = True
-        path = os.path.join(os.getcwd(), "..")
-        globals.TEMPORARY_FOLDER = os.path.join(path, "tmp")
-        globals.FILE_FOLDER = os.path.join(path, "files_for_testing")
-        globals.create_folders()
         self.file_name = "client.txt"
         self.file_crypt = FileCryptography()
-        self.file_path = os.path.join(globals.FILE_FOLDER, self.file_name)
+        self.file_path = pl.PurePath.joinpath(globals.TEST_FILE_FOLDER, self.file_name)
 
     def test_encrypt_decrypt(self):
         start_file = ""
         end_file = ""
         with open(self.file_path, "rt") as file:
             start_file = file.read()
-        file_encrypted, additional_data = self.file_crypt.encrypt_file(self.file_name)
+        file_encrypted, additional_data = self.file_crypt.encrypt_file(self.file_path)
         file_decrypted = self.file_crypt.decrypt_file(file_path=file_encrypted, additional_data=additional_data)
         with open(file_decrypted, "rt") as file:
            end_file = file.read()
         self.assertEqual(start_file, end_file, "Files differ!")
 
     def test_invalid_tag(self):
-        file_encrypted, additional_data = self.file_crypt.encrypt_file(self.file_name)
+        file_encrypted, additional_data = self.file_crypt.encrypt_file(self.file_path)
         with open(file_encrypted, "ab") as file:
             file.write(b'hejjj')
         self.assertRaises(cryptography.exceptions.InvalidTag,

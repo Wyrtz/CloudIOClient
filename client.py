@@ -1,4 +1,5 @@
 import os
+import pathlib as pl
 from threading import Thread
 from time import sleep
 from watchdog.events import FileSystemEventHandler
@@ -26,7 +27,7 @@ class MyHandler(FileSystemEventHandler):
         file_name = event.src_path.split("/")[1]
         response = None
         enc_file_name = ""
-        file_path = os.path.join(globals.FILE_FOLDER, file_name)
+        file_path = pl.PurePath.joinpath(globals.FILE_FOLDER, file_name)
         if file_path in globals.DOWNLOADED_FILE_QUEUE:
             globals.DOWNLOADED_FILE_QUEUE.remove(file_path)
             print("Removed ", file_path, "from queue")
@@ -40,7 +41,7 @@ class MyHandler(FileSystemEventHandler):
             self.on_created(event)
             return
         if response.status_code == 200:
-            os.remove(enc_file_name)
+            pl.Path.unlink(enc_file_name) # Delete file
         # print("Send file")
         # sleep(3)
         # print("Delete file")
@@ -53,7 +54,7 @@ class MyHandler(FileSystemEventHandler):
 
 class client():
 
-    def __init__(self, serverIP, file_folder=os.path.join(os.getcwd(), globals.FILE_FOLDER)):
+    def __init__(self, serverIP, file_folder=globals.FILE_FOLDER):
         self.serverIP = serverIP
         self.file_folder = file_folder
         self.servercoms = ServComs(serverIP)
@@ -80,6 +81,7 @@ class client():
     def get_folder_list(self):
         """Return a list where each element is the string name of this file"""
         # ToDo: recursive (folders)
+        # ToDO: PathLib!
         files = os.listdir(self.folder)
         file_list = []
         for name in files:
