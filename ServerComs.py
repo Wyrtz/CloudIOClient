@@ -58,3 +58,9 @@ class ServComs():
 
     # Todo: rename file: Send delete file request (and send the renamed file)
     # Todo: delete file
+
+    def register_deletion_of_file(self, enc_file_name):
+        '''Signals to server that the file known by its encrypted alias should not be considered 'live' anymore.'''
+        response = requests.post('https://' + self.serverLocation + '/archive_file/' + enc_file_name, verify=self.verify)
+        response.raise_for_status()
+        # TODO: Consider adding upload verification?

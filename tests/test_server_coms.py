@@ -31,7 +31,7 @@ class TestServercoms(unittest.TestCase):
     def test_receive_send_file(self):
         with open(self.file_path, 'rb') as file:
             file_content = file.read()
-        enc_file_name = self.enc.encrypt_filename(self.relative_file_path)
+        enc_file_name = self.enc.encrypt_relative_file_path(self.relative_file_path)
         _, additional_data_local = self.send_file()
         tmp_file_location, additional_data_received = self.serverComs.get_file(enc_file_name)
         self.assertTrue(additional_data_local == additional_data_received, "Additional data has changed during upload.")

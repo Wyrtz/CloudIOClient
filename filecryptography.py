@@ -17,17 +17,18 @@ class FileCryptography:
         self.get_secrets()
         self.aesgcm = AESGCM(key=self.key)
 
-    def encrypt_filename(self, file_name):
+    def encrypt_relative_file_path(self, file_name):
         return self.aesgcm.encrypt(self.salt, bytes(str(file_name), 'utf-8'), associated_data=None).hex() + ".cio"
 
     def encrypt_file(self, file_path):
         """Encrypt file_path and return path of the encrypted file"""
-        file_name = file_path.relative_to(globals.WORK_DIR)
-        enc_file_name = self.encrypt_filename(file_name)
+        relative_file_path = file_path.relative_to(globals.WORK_DIR)
+        enc_file_name = self.encrypt_relative_file_path(relative_file_path)
+        print(enc_file_name)
         curr_time = time.time()
         additional_data = {'t': curr_time, 'n': enc_file_name}
         additional_data_json = json.dumps(additional_data)
-        enc_file_path = pl.PurePath.joinpath(pl.PurePath(globals.TEMPORARY_FOLDER), enc_file_name)
+        enc_file_path = pl.Path.joinpath(pl.Path(globals.TEMPORARY_FOLDER), enc_file_name)
         with open(file_path, 'rb') as file:
             enc_file_data = self.aesgcm.encrypt(self.salt, file.read(),
                                                 associated_data=bytes(additional_data_json, 'utf-8'))

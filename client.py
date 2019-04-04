@@ -14,7 +14,7 @@ class MyHandler(FileSystemEventHandler):
 
     # ToDo: handle creations properly.
 
-    def __init__(self, servercoms, file_crypt):
+    def __init__(self, servercoms: ServComs, file_crypt: FileCryptography):
         self.servercoms = servercoms
         self.file_crypt = file_crypt
 
@@ -24,34 +24,33 @@ class MyHandler(FileSystemEventHandler):
 
     def on_created(self, event):
         """Send newly created file to the server"""
-        file_name = event.src_path.split("/")[1]
-        response = None
-        enc_file_name = ""
-        file_path = pl.PurePath.joinpath(globals.FILE_FOLDER, file_name)
-        if file_path in globals.DOWNLOADED_FILE_QUEUE:
-            globals.DOWNLOADED_FILE_QUEUE.remove(file_path)
-            print("Removed ", file_path, "from queue")
+        file_path = pl.Path(event.src_path)
+        relative_file_path = file_path.relative_to(globals.WORK_DIR)
+        print(relative_file_path)
+        if relative_file_path in globals.DOWNLOADED_FILE_QUEUE:
+            globals.DOWNLOADED_FILE_QUEUE.remove(relative_file_path)
             return
         try:
-            enc_file_name, additional_data = self.file_crypt.encrypt_file(file_path)
-            response = self.servercoms.send_file(enc_file_name, additional_data)
+            enc_file_path, additional_data = self.file_crypt.encrypt_file(file_path)
+            self.servercoms.send_file(enc_file_path, additional_data)
         except PermissionError:
             print("failed once")
             sleep(5)
             self.on_created(event)
             return
-        if response.status_code == 200:
-            pl.Path.unlink(enc_file_name)  # Delete file
-        # print("Send file")
-        # sleep(3)
-        # print("Delete file")
-        # os.remove(file_path)
-        # sleep(3)
-        # print("Get file")
-        # _, enc_file_path = self.servercoms.get_file(enc_file_name)
-        # dec_file_path = self.file_crypt.decrypt_file(enc_file_path)
+        # TODO: Handle httperror?
+        pl.Path.unlink(enc_file_path)  # Delete file
 
-class client():
+    def on_deleted(self, event):
+        abs_path = pl.Path(event.src_path)
+        relative_path = abs_path.relative_to(globals.WORK_DIR)
+        enc_file_name = self.file_crypt.encrypt_relative_file_path(relative_path)
+        print(relative_path)
+        print(enc_file_name)
+        self.servercoms.register_deletion_of_file(enc_file_name)
+
+
+class Client:
 
     def __init__(self, server_location=globals.SERVER_LOCATION, file_folder=globals.FILE_FOLDER):
         self.server_location = server_location
@@ -59,15 +58,13 @@ class client():
         self.servercoms = ServComs(server_location)
         self.file_crypt = FileCryptography()
         self.handler = MyHandler(self.servercoms, self.file_crypt)
-        folder_watcher_thread = Thread(target=folder_watcher, args=(file_folder, self.handler))
+        folder_watcher_thread = Thread(target=folder_watcher, args=(str(file_folder), self.handler))
         folder_watcher_thread.start()
-        # self.folder_watcher = folder_watcher(folder + "/", self.handler)
-        # self.sync_files()
 
     def get_file(self, file_name):
         # Encrypt the name, send a request and get back either '404' or a file candidate.
         # If the candidate is valid and newer, keep it.
-        enc_file_name = FileCryptography.encrypt_filename(file_name)
+        enc_file_name = FileCryptography.encrypt_relative_file_path(file_name)
         try:
             tmp_enc_file_path, additional_data = self.servercoms.get_file(enc_file_name)
         except FileNotFoundError:
@@ -104,4 +101,4 @@ class client():
 if __name__ == "__main__":
     serverIP = 'wyrnas.myqnapcloud.com:8000'
     globals.create_folders()
-    client = client(serverIP)
+    client = Client(serverIP)
