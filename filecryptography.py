@@ -24,7 +24,6 @@ class FileCryptography:
         """Encrypt file_path and return path of the encrypted file"""
         relative_file_path = file_path.relative_to(globals.WORK_DIR)
         enc_file_name = self.encrypt_relative_file_path(relative_file_path)
-        print(enc_file_name)
         curr_time = time.time()
         additional_data = {'t': curr_time, 'n': enc_file_name}
         additional_data_json = json.dumps(additional_data)

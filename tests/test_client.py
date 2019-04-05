@@ -33,3 +33,8 @@ class TestClient(unittest.TestCase):
         # print("Get file")
         # _, enc_file_path = self.servercoms.get_file(enc_file_name)
         # dec_file_path = self.file_crypt.decrypt_file(enc_file_path)
+
+    def tearDown(self):
+        print("Mister Watchdog")
+        self.client.close_client()
+        globals.clear_tmp()

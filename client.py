@@ -1,18 +1,16 @@
 import os
 import pathlib as pl
 from threading import Thread
-from time import sleep
+from time import sleep, time
 from watchdog.events import FileSystemEventHandler
 from ServerComs import ServComs
 from filecryptography import FileCryptography
-from folder_watcher import folder_watcher
+from watchdog.observers import Observer
 import globals
 
 
 class MyHandler(FileSystemEventHandler):
     """Custom Handling FileSystemEvents"""
-
-    # ToDo: handle creations properly.
 
     def __init__(self, servercoms: ServComs, file_crypt: FileCryptography):
         self.servercoms = servercoms
@@ -48,6 +46,7 @@ class MyHandler(FileSystemEventHandler):
         print(relative_path)
         print(enc_file_name)
         self.servercoms.register_deletion_of_file(enc_file_name)
+        # ToDo: deletion of file not yet uploaded gives 404 and crash
 
 
 class Client:
@@ -57,9 +56,21 @@ class Client:
         self.file_folder = file_folder
         self.servercoms = ServComs(server_location)
         self.file_crypt = FileCryptography()
-        self.handler = MyHandler(self.servercoms, self.file_crypt)
-        folder_watcher_thread = Thread(target=folder_watcher, args=(str(file_folder), self.handler))
-        folder_watcher_thread.start()
+        #self.handler = MyHandler(self.servercoms, self.file_crypt)
+        self.handler_thread = Thread(target=MyHandler, args=(self.servercoms, self.file_crypt))
+        self.handler_thread.start()
+        # Start initial folder observer
+        self.observers_list = []
+        self.start_folder_observer(self.file_folder)
+        # Keep this thread alive
+        # self.wait_for_input()
+
+    def start_folder_observer(self, file_folder_path):
+        new_observer = Observer()
+        handler = MyHandler(self.servercoms, self.file_crypt)
+        new_observer.schedule(handler, str(file_folder_path), recursive=True)
+        self.observers_list.append(new_observer)
+        new_observer.start()
 
     def get_file(self, file_name):
         # Encrypt the name, send a request and get back either '404' or a file candidate.
@@ -97,9 +108,19 @@ class Client:
         # todo: Test this!
         # todo: handle file not found, no connection etc. !
 
-    # ToDo: make 'close_client' function, such that tests (and later user) can close client after use
+    def close_client(self):
+        for observer in self.observers_list:
+            observer.stop()
+        for observer in self.observers_list:
+            observer.join()
+
 
 if __name__ == "__main__":
     serverIP = 'wyrnas.myqnapcloud.com:8000'
-    globals.create_folders()
     client = Client(serverIP)
+    try:
+        while True:
+            sleep(1)
+    except KeyboardInterrupt:
+        client.close_client()
+
