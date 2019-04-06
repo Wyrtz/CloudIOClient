@@ -16,16 +16,20 @@ def create_folders():
     if not os.path.isdir(FILE_FOLDER):
         os.mkdir(FILE_FOLDER)
 
+
 PROJECT_NAME = "CloudIOClient"
 PROJECT_NAME = PROJECT_NAME
 WORK_DIR = get_CloudIOClient_path()
-TEST_FOLDER = pl.PurePath.joinpath(WORK_DIR, "tests")
-TEST_FILE_FOLDER = pl.PurePath.joinpath(WORK_DIR, "files_for_testing")
-FILE_FOLDER = pl.PurePath.joinpath(WORK_DIR, "files")
-TEMPORARY_FOLDER = pl.PurePath.joinpath(WORK_DIR, "tmp")
+TEST_FOLDER = pl.Path.joinpath(WORK_DIR, "tests")
+TEST_FILE_FOLDER = pl.Path.joinpath(WORK_DIR, "files_for_testing")
+FILE_FOLDER = pl.Path.joinpath(WORK_DIR, "files")
+TEMPORARY_FOLDER = pl.Path.joinpath(WORK_DIR, "tmp")
 create_folders()
 DOWNLOADED_FILE_QUEUE = []
 SERVER_LOCATION = 'wyrnas.myqnapcloud.com:8000'
+KEY_HASH = pl.Path.joinpath(WORK_DIR, 'key_hash.txt')
+KEY_SALT = pl.Path.joinpath(WORK_DIR, 'key_salt.txt')
+
 
 def clear_tmp():
     for file in os.listdir(TEMPORARY_FOLDER):
