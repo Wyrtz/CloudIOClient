@@ -1,9 +1,8 @@
 import unittest
-import os
 
 from ServerComs import ServComs
-from filecryptography import FileCryptography
-import globals
+from security.filecryptography import FileCryptography
+from resources import globals
 import pathlib as pl
 
 

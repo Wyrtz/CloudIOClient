@@ -6,21 +6,18 @@ import pathlib as pl
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 import secrets
-import globals
+from resources import globals
 
 
 class FileCryptography:
 
-    def __init__(self):
-        self.key_path = pl.PurePath.joinpath(globals.WORK_DIR, 'key.key')  # TODO: Temp. Should derive key from pw + salt.
-        self.salt_path = pl.PurePath.joinpath(globals.WORK_DIR, 'salt.salt')
-        self.get_secrets()
-        self.aesgcm = AESGCM(key=self.key)
+    def __init__(self, key):
+        self.aesgcm = AESGCM(key=bytes.fromhex(key))
 
-    def encrypt_relative_file_path(self, file_name):
-        return self.aesgcm.encrypt(self.salt, bytes(str(file_name), 'utf-8'), associated_data=None).hex() + ".cio"
+    def encrypt_relative_file_path(self, relative_file_path, nonce):
+        return self.aesgcm.encrypt(nonce, bytes(str(relative_file_path), 'utf-8'), associated_data=None).hex() + ".cio"
 
-    def encrypt_file(self, file_path):
+    def encrypt_file(self, file_path, nonce1, nonce2):
         """Encrypt file_path and return path of the encrypted file"""
         relative_file_path = file_path.relative_to(globals.WORK_DIR)
         enc_file_name = self.encrypt_relative_file_path(relative_file_path)
@@ -68,7 +65,10 @@ class FileCryptography:
             dec_file_name_list.append(pl.Path(str(dec_file_name, 'utf-8')))
         return dec_file_name_list
 
-    def safe_secrets(self):
+    def encrypt_key(self, key, nonce):
+        return self.aesgcm.encrypt(nonce, bytes.fromhex(key), associated_data=None)
+
+    def safe_secrets(self):  # TODO: Remove unused and depricated func
         file = open(self.key_path, 'wb')
         file.write(self.key)
         file.close()
@@ -77,7 +77,7 @@ class FileCryptography:
         file.write(self.salt)
         file.close()
 
-    def get_secrets(self):
+    def get_secrets(self):  # TODO: Remove unused and depricated func
         #ToDo: Save in plaintext ?
         key_exists = os.path.isfile(self.key_path)
         salt_exists = os.path.isfile(self.salt_path)

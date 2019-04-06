@@ -1,11 +1,10 @@
-import os
 import pathlib as pl
 
 import cryptography
 import unittest
 
-from filecryptography import FileCryptography
-import globals
+from security.filecryptography import FileCryptography
+from resources import globals
 
 
 class test_file_cryptography(unittest.TestCase):

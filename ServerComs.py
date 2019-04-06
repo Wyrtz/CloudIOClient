@@ -1,11 +1,10 @@
 import json
-import os
 import pathlib as pl
 from json import JSONDecodeError
 
 import requests
 
-import globals
+from resources import globals
 
 
 class ServComs():

@@ -2,7 +2,7 @@ import unittest
 import pathlib as pl
 from time import sleep
 
-import globals
+from resources import globals
 from client import Client
 import os
 

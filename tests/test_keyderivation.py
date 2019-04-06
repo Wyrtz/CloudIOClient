@@ -1,7 +1,8 @@
 import time
 import unittest
-import keyderivation
-import globals
+from security import keyderivation
+from resources import globals
+from security.keyderivation import BadKeyException
 
 
 class TestKeyDerivation(unittest.TestCase):
@@ -10,13 +11,13 @@ class TestKeyDerivation(unittest.TestCase):
         self.kd = keyderivation.KeyDerivation('12345')
         self.pw = '12345'
         try:
-            self.key_hash_to_save = keyderivation.get_hash_of_key()
+            self.key_hashes_to_save = keyderivation.get_hashes_of_keys()
         except FileNotFoundError:  # File might not exist.
             pass
 
     def tearDown(self):
         try:
-            recover_key_hash_to_save(self.key_hash_to_save)
+            recover_key_hashes(self.key_hashes_to_save)
         except AttributeError:  # If file not found attribute doesn't exist.
             pass
 
@@ -25,7 +26,7 @@ class TestKeyDerivation(unittest.TestCase):
         self.kd.derive_key(self.pw, verify=False)
         now_ = time.time()
         time_diff = now_ - now
-        print("\nTook", time_diff, "to derive key.\n")
+        # print("\nTook", time_diff, "to derive key.\n")
         self.assertGreater(time_diff, 1, "Takes less than 1 second to derive key.")
 
     def test_same_pw_derives_same_pw_while_pw_prime_does_not(self):
@@ -58,7 +59,27 @@ class TestKeyDerivation(unittest.TestCase):
         self.assertTrue(self.kd.key_verifies(key2), "Key doesn't validate.")
         self.assertFalse(self.kd.key_verifies(key1), "Key shouldn't validate.")
 
+    def test_can_replace_pw(self):
+        pw_1 = '12345'
+        pw_2 = 'abcde'
+        self.kd.select_first_pw(pw_1)
+        key1 = self.kd.derive_key(pw_1)
+        self.kd.replace_pw(pw_1, pw_2)
+        key2 = self.kd.derive_key(pw_2)
+        self.assertTrue(key1 != key2)
 
-def recover_key_hash_to_save(hash_of_key):
-    with open(globals.KEY_HASH, 'wb') as file:
-        file.write(hash_of_key)
+    def test_cannot_replace_pw_with_wrong_pw(self):
+        pw_1 = '12345'
+        pw_2 = 'abcde'
+        pw_3 = 'asdfg'
+        self.kd.select_first_pw(pw_1)
+        key1 = self.kd.derive_key(pw_1)
+        self.assertRaises(BadKeyException, self.kd.replace_pw, pw_3, pw_2)
+
+
+def recover_key_hashes(hashes_of_keys):
+    hashes_str = ""
+    for key_hash in hashes_of_keys:
+        hashes_str += key_hash + "\n"
+    with open(globals.KEY_HASHES, 'w') as file:
+        file.write(hashes_str)

@@ -2,13 +2,13 @@ import os
 import pathlib as pl
 import platform
 from threading import Thread
-from time import sleep, time
+from time import sleep
 from watchdog.events import FileSystemEventHandler
 from ServerComs import ServComs
-from filecryptography import FileCryptography
+from security.filecryptography import FileCryptography
 from watchdog.observers import Observer
 from pyfiglet import Figlet
-import globals
+from resources import globals
 
 
 class MyHandler(FileSystemEventHandler):

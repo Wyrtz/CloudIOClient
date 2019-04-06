@@ -1,5 +1,6 @@
 import os
 import pathlib as pl
+import secrets
 from asyncio import sleep
 
 
@@ -22,6 +23,7 @@ def create_folders():
 PROJECT_NAME = "CloudIOClient"
 PROJECT_NAME = PROJECT_NAME
 WORK_DIR = get_CloudIOClient_path()
+RESOURCE_DIR = pl.Path.joinpath(WORK_DIR, 'resources')
 TEST_FOLDER = pl.Path.joinpath(WORK_DIR, "tests")
 TEST_FILE_FOLDER = pl.Path.joinpath(WORK_DIR, "files_for_testing")
 FILE_FOLDER = pl.Path.joinpath(WORK_DIR, "files")
@@ -29,8 +31,9 @@ TEMPORARY_FOLDER = pl.Path.joinpath(WORK_DIR, "tmp")
 create_folders()
 DOWNLOADED_FILE_QUEUE = []
 SERVER_LOCATION = 'wyrnas.myqnapcloud.com:8000'
-KEY_HASH = pl.Path.joinpath(WORK_DIR, 'key_hash.txt')
-KEY_SALT = pl.Path.joinpath(WORK_DIR, 'key_salt.txt')
+KEY_HASHES = pl.Path.joinpath(RESOURCE_DIR, 'key_hashes.txt')
+KEY_SALTS = pl.Path.joinpath(RESOURCE_DIR, 'key_salts.txt')  # TODO: Perhaps instead of static make random & record all salts.
+ENC_OLD_KEYS = pl.Path.joinpath(RESOURCE_DIR, 'enc_keys.txt')  # Should contain old key encryptions
 
 
 def clear_tmp():
@@ -41,3 +44,7 @@ def clear_tmp():
         except PermissionError:
             sleep(0.1)
             clear_tmp()
+
+
+def get_nonce(length=12):
+    return secrets.token_bytes(length)
