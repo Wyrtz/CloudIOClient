@@ -3,6 +3,10 @@ import os
 import pathlib as pl
 from json import JSONDecodeError
 
+import urllib3
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
 import requests
 
 import globals

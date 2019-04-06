@@ -20,12 +20,14 @@ class MyHandler(FileSystemEventHandler):
 
     def on_any_event(self, event):
         """Print any received event to console"""
-        print(f'event type: {event.event_type}  path : {event.src_path}')
+        # print(f'event type: {event.event_type}  path : {event.src_path}')
+        pass
 
     def on_created(self, event):
         """Send newly created file to the server"""
         file_path = pl.Path(event.src_path)
         relative_file_path = file_path.relative_to(globals.WORK_DIR)
+        print("File created: " + str(relative_file_path))
         if relative_file_path in globals.DOWNLOADED_FILE_QUEUE:
             globals.DOWNLOADED_FILE_QUEUE.remove(relative_file_path)
             return
@@ -33,8 +35,8 @@ class MyHandler(FileSystemEventHandler):
             enc_file_path, additional_data = self.file_crypt.encrypt_file(file_path)
             self.servercoms.send_file(enc_file_path, additional_data)
         except PermissionError:
-            print("failed once")
-            sleep(5)
+            print("Unable to send file immediately...")
+            sleep(1)
             self.on_created(event)
             return
         # TODO: Handle httperror?
@@ -43,6 +45,7 @@ class MyHandler(FileSystemEventHandler):
     def on_deleted(self, event):
         abs_path = pl.Path(event.src_path)
         relative_path = abs_path.relative_to(globals.WORK_DIR)
+        print("File deleted: " + str(relative_path))
         enc_file_name = self.file_crypt.encrypt_relative_file_path(relative_path)
         self.servercoms.register_deletion_of_file(enc_file_name)
 
@@ -88,6 +91,8 @@ class Client:
         # ToDO: PathLib? No os.listdir function
         file_list = os.listdir(self.file_folder)
         file_list = [pl.Path(x) for x in file_list]
+        file_list = [pl.Path.joinpath(globals.FILE_FOLDER, x) for x in file_list]
+        file_list = [x.relative_to(globals.WORK_DIR) for x in file_list]
         return file_list
 
     def sync_files(self):  # TODO: Refactor this.
@@ -135,39 +140,68 @@ def start_user_interface():
                 print_local_files()
             if command == "rf" or command == "remote files":
                 print("Remote files:")
-                print(client.servercoms.get_file_list())
+                print_remote_files()
             if command == "gf" or command == "get file":
                 print("getting file...")
                 print("(not implemented)")
+            if command == "diff" or command == "d":
+                print_diff_to_server()
+            else:
+                print(get_help())
 
     except KeyboardInterrupt:
+        clear_screen(print_logo=False)
         client.close_client()
 
 
+def print_list(list_to_print):
+    for element in list_to_print:
+        print("\t", element)
+
+
 def print_remote_files():
-    remote_file_list = client.servercoms.get_file_list()
-    if len(remote_file_list) == 0:
-        print("\t(no files locally)")
+    enc_remote_file_list = client.servercoms.get_file_list()
+    if len(enc_remote_file_list) == 0:
+        print("\t(no files on server)")
     else:
-        print(remote_file_list)
+        dec_remote_file_list = client.file_crypt.decrypt_file_list(enc_remote_file_list)
+        print_list(dec_remote_file_list)
+
 
 def print_local_files():
     local_file_list = client.get_local_file_list()
     if len(local_file_list) == 0:
         print("\t(no files locally)")
     else:
-        print(local_file_list)
+        print_list(local_file_list)
 
+def print_diff_to_server():
+    local_file_list = client.get_local_file_list()
+    enc_remote_file_list = client.servercoms.get_file_list()
+    dec_remote_file_list = client.file_crypt.decrypt_file_list(enc_remote_file_list)
+    pathlib_remote_file_list = [pl.Path(x) for x in dec_remote_file_list]
+    files_not_on_server = globals.get_list_difference(local_file_list, pathlib_remote_file_list)
+    files_not_on_client = globals.get_list_difference(pathlib_remote_file_list, local_file_list)
+    print("Difference:")
+    if len(files_not_on_client) == 0:
+        print("\tClient up to date")
+    else:
+        print("Files not on client:")
+        print_list(files_not_on_client)
+    if len(files_not_on_server) == 0:
+        print("\tServer up to date")
+    else:
+        print("Files not on server:")
+        print_list(files_not_on_server)
 
-def clear_screen():
+def clear_screen(print_logo=True):
     if platform.system() == 'Windows':
         os.system('cls')
     else:
         os.system('clear')
-    # print("*" + "CloudIOClient" + "*")
-    # print("*"*15)
-    figlet = Figlet()
-    print(figlet.renderText(globals.PROJECT_NAME))
+    if print_logo:
+        figlet = Figlet()
+        print(figlet.renderText(globals.PROJECT_NAME))
 
 def get_help():
     help = """
@@ -177,6 +211,7 @@ Available commands:
     Local_files (ls, lf, local files)
     Remote_files (rf, remote files)
     Get_file (gf, get file)
+    Diff_local/remote (diff, d)
                     """
     return help
 

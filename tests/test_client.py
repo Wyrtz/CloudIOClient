@@ -53,7 +53,7 @@ class TestClient(unittest.TestCase):
         enc_file_name = self.client.file_crypt.encrypt_relative_file_path(random_file_relative_path)
         self.client.get_file(enc_file_name)
         sleep(self.sleep_time)
-        self.assertIn(random_file_name, self.client.get_local_file_list())
+        self.assertIn(random_file_relative_path, self.client.get_local_file_list())
 
 
     def tearDown(self):
