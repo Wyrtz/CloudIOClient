@@ -26,6 +26,7 @@ class ServComs():
                                             'additional_data': bytes(json.dumps(additional_data), 'utf-8')},
                                      verify=self.verify)
             response.raise_for_status()
+            print("File successfully send")
 
     def get_file(self, enc_file_name):
         """Retrive enc_file_name from server and place it in tmp (ready for decryption)"""
@@ -61,7 +62,11 @@ class ServComs():
     # Todo: delete file
 
     def register_deletion_of_file(self, enc_file_name):
-        '''Signals to server that the file known by its encrypted alias should not be considered 'live' anymore.'''
+        """Signals to server that the file known by its encrypted alias should not be considered 'live' anymore."""
         response = requests.post('https://' + self.serverLocation + '/archive_file/' + enc_file_name, verify=self.verify)
-        response.raise_for_status()
+        if response.status_code != 404:
+            response.raise_for_status()
+        else:
+            print("File not on server")
+        print("File archived on server")
         # TODO: Consider adding upload verification?

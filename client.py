@@ -24,7 +24,6 @@ class MyHandler(FileSystemEventHandler):
         """Send newly created file to the server"""
         file_path = pl.Path(event.src_path)
         relative_file_path = file_path.relative_to(globals.WORK_DIR)
-        print(relative_file_path)
         if relative_file_path in globals.DOWNLOADED_FILE_QUEUE:
             globals.DOWNLOADED_FILE_QUEUE.remove(relative_file_path)
             return
@@ -43,10 +42,7 @@ class MyHandler(FileSystemEventHandler):
         abs_path = pl.Path(event.src_path)
         relative_path = abs_path.relative_to(globals.WORK_DIR)
         enc_file_name = self.file_crypt.encrypt_relative_file_path(relative_path)
-        print(relative_path)
-        print(enc_file_name)
         self.servercoms.register_deletion_of_file(enc_file_name)
-        # ToDo: deletion of file not yet uploaded gives 404 and crash
 
 
 class Client:
@@ -56,14 +52,11 @@ class Client:
         self.file_folder = file_folder
         self.servercoms = ServComs(server_location)
         self.file_crypt = FileCryptography()
-        #self.handler = MyHandler(self.servercoms, self.file_crypt)
         self.handler_thread = Thread(target=MyHandler, args=(self.servercoms, self.file_crypt))
         self.handler_thread.start()
         # Start initial folder observer
         self.observers_list = []
         self.start_folder_observer(self.file_folder)
-        # Keep this thread alive
-        # self.wait_for_input()
 
     def start_folder_observer(self, file_folder_path):
         new_observer = Observer()
@@ -73,8 +66,8 @@ class Client:
         new_observer.start()
 
     def get_file(self, file_name):
-        # Encrypt the name, send a request and get back either '404' or a file candidate.
-        # If the candidate is valid and newer, keep it.
+        """Encrypt the name, send a request and get back either '404' or a file candidate.
+           If the candidate is valid and newer, keep it."""
         enc_file_name = FileCryptography.encrypt_relative_file_path(file_name)
         try:
             tmp_enc_file_path, additional_data = self.servercoms.get_file(enc_file_name)
@@ -109,6 +102,7 @@ class Client:
         # todo: handle file not found, no connection etc. !
 
     def close_client(self):
+        """Close all observers observing a folder"""
         for observer in self.observers_list:
             observer.stop()
         for observer in self.observers_list:

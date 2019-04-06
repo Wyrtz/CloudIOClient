@@ -60,11 +60,12 @@ class FileCryptography:
         globals.DOWNLOADED_FILE_QUEUE.append(dec_file_name)
         return dec_file_path
 
-    def decrypt_file_list(self, enc_file_name_list: list):
+    def decrypt_file_list(self, enc_file_name_list: list) -> list:
+        """Get a list of encrypted file names, decrypt them, make them to paths and return an unencrypted list"""
         dec_file_name_list = []
         for file in enc_file_name_list:
             dec_file_name = self.decrypt_relative_file_path(pl.Path(file))
-            dec_file_name_list.append(str(dec_file_name, 'utf-8'))
+            dec_file_name_list.append(pl.Path(str(dec_file_name, 'utf-8')))
         return dec_file_name_list
 
     def safe_secrets(self):
