@@ -1,11 +1,13 @@
 import os
 import pathlib as pl
+import platform
 from threading import Thread
 from time import sleep, time
 from watchdog.events import FileSystemEventHandler
 from ServerComs import ServComs
 from filecryptography import FileCryptography
 from watchdog.observers import Observer
+from pyfiglet import Figlet
 import globals
 
 
@@ -108,13 +110,78 @@ class Client:
         for observer in self.observers_list:
             observer.join()
 
+def start_user_interface():
+    figlet = Figlet()
+    try:
+        clear_screen()
+        username = input("Username:")
+        password = input("Password:")
+        clear_screen()
+        welcome = "Welcome " + username + " !"
+        print(figlet.renderText(welcome))
+        # sleep(1.5)
+        clear_screen()
+        while True:
+            command = input("Command:")
+            command = command.lower()
+            clear_screen()
+            if command == "h" or command == "help":
+                print(get_help())
+            if command == "sync" or command == "s":
+                print("Syncing...")
+                print("(not implemented)")
+            if command == "ls" or command == "lf" or command == "local files":
+                print("Local files:")
+                print_local_files()
+            if command == "rf" or command == "remote files":
+                print("Remote files:")
+                print(client.servercoms.get_file_list())
+            if command == "gf" or command == "get file":
+                print("getting file...")
+                print("(not implemented)")
+
+    except KeyboardInterrupt:
+        client.close_client()
+
+
+def print_remote_files():
+    remote_file_list = client.servercoms.get_file_list()
+    if len(remote_file_list) == 0:
+        print("\t(no files locally)")
+    else:
+        print(remote_file_list)
+
+def print_local_files():
+    local_file_list = client.get_local_file_list()
+    if len(local_file_list) == 0:
+        print("\t(no files locally)")
+    else:
+        print(local_file_list)
+
+
+def clear_screen():
+    if platform.system() == 'Windows':
+        os.system('cls')
+    else:
+        os.system('clear')
+    # print("*" + "CloudIOClient" + "*")
+    # print("*"*15)
+    figlet = Figlet()
+    print(figlet.renderText(globals.PROJECT_NAME))
+
+def get_help():
+    help = """
+Available commands:
+    Help (h, help)
+    Sync (s, sync)
+    Local_files (ls, lf, local files)
+    Remote_files (rf, remote files)
+    Get_file (gf, get file)
+                    """
+    return help
 
 if __name__ == "__main__":
     serverIP = 'wyrnas.myqnapcloud.com:8000'
     client = Client(serverIP)
-    try:
-        while True:
-            sleep(1)
-    except KeyboardInterrupt:
-        client.close_client()
+    start_user_interface()
 
