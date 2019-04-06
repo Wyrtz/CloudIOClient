@@ -25,7 +25,7 @@ class TestClient(unittest.TestCase):
     def test_delete_files(self):
         random_file_path = self.create_random_file()
         random_file_relative_path = random_file_path.relative_to(globals.WORK_DIR)
-        sleep(0.5)
+        sleep(1)
         pl.Path.unlink(random_file_path)
         self.random_files_list.remove(random_file_path)
         sleep(self.sleep_time)
@@ -49,12 +49,12 @@ class TestClient(unittest.TestCase):
         pl.Path.unlink(random_file_path)
         self.assertNotIn(random_file_name, self.client.get_local_file_list())
         # Get file back, make sure we got it
-        enc_file_name = self.client.file_crypt.encrypt_relative_file_path(random_file_relative_path)
-        self.client.get_file(enc_file_name)
+        self.client.get_file(random_file_relative_path)
         sleep(self.sleep_time)
         self.assertIn(random_file_relative_path, self.client.get_local_file_list())
 
     def tearDown(self):
+        self.client.start_observing()
         for file in self.random_files_list:
             if pl.Path.exists(file):
                 pl.Path.unlink(file)

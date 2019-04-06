@@ -14,9 +14,10 @@ import globals
 class MyHandler(FileSystemEventHandler):
     """Custom Handling FileSystemEvents"""
 
-    def __init__(self, servercoms: ServComs, file_crypt: FileCryptography):
+    def __init__(self, servercoms: ServComs, file_crypt: FileCryptography, client):
         self.servercoms = servercoms
         self.file_crypt = file_crypt
+        self.client = client
 
     def on_any_event(self, event):
         """Print any received event to console"""
@@ -31,16 +32,7 @@ class MyHandler(FileSystemEventHandler):
         if relative_file_path in globals.DOWNLOADED_FILE_QUEUE:
             globals.DOWNLOADED_FILE_QUEUE.remove(relative_file_path)
             return
-        try:
-            enc_file_path, additional_data = self.file_crypt.encrypt_file(file_path)
-            self.servercoms.send_file(enc_file_path, additional_data)
-        except PermissionError:
-            print("Unable to send file immediately...")
-            sleep(1)
-            self.on_created(event)
-            return
-        # TODO: Handle httperror?
-        pl.Path.unlink(enc_file_path)  # Delete file
+        self.client.send_file(file_path)
 
     def on_deleted(self, event):
         abs_path = pl.Path(event.src_path)
@@ -57,7 +49,7 @@ class Client:
         self.file_folder = file_folder
         self.servercoms = ServComs(server_location)
         self.file_crypt = FileCryptography()
-        self.handler_thread = Thread(target=MyHandler, args=(self.servercoms, self.file_crypt))
+        self.handler_thread = Thread(target=MyHandler, args=(self.servercoms, self.file_crypt, self))
         self.handler_thread.start()
         # Start initial folder observer
         self.observers_list = []
@@ -68,16 +60,28 @@ class Client:
 
     def start_new_folder_observer(self, file_folder_path):
         new_observer = Observer()
-        handler = MyHandler(self.servercoms, self.file_crypt)
+        handler = MyHandler(self.servercoms, self.file_crypt, self)
         new_observer.schedule(handler, str(file_folder_path), recursive=True)
         self.observers_list.append(new_observer)
         new_observer.start()
 
+    def send_file(self, file_path):
+        try:
+            enc_file_path, additional_data = self.file_crypt.encrypt_file(file_path)
+            self.servercoms.send_file(enc_file_path, additional_data)
+        except PermissionError:
+            print("Unable to send file immediately...")
+            sleep(1)
+            self.send_file(file_path)
+            return
+        pl.Path.unlink(enc_file_path)  # Delete file
+
     def get_file(self, file_name):
         """Encrypt the name, send a request and get back either '404' or a file candidate.
            If the candidate is valid and newer, keep it."""
+        enc_file_name = self.file_crypt.encrypt_relative_file_path(file_name)
         try:
-            tmp_enc_file_path, additional_data = self.servercoms.get_file(file_name)
+            tmp_enc_file_path, additional_data = self.servercoms.get_file(str(enc_file_name))
         except FileNotFoundError:
             print("File not found on server.")
             return
@@ -96,15 +100,16 @@ class Client:
         return file_list
 
     def sync_files(self):  # TODO: Refactor this.
-        local_file_names = self.get_local_file_list()
-        enc_remote_file_names= self.servercoms.get_file_list()
-        remote_file_names = self.file_crypt.decrypt_file_list(enc_remote_file_names)
-        for name in local_file_names:
-            if name not in remote_file_names:
-                self.send_file(name)
-        for name in remote_file_names:
-            if name not in local_file_names:
-                self.get_file(name)
+        local_file_list = client.get_local_file_list()
+        enc_remote_file_list = client.servercoms.get_file_list()
+        dec_remote_file_list = client.file_crypt.decrypt_file_list(enc_remote_file_list)
+        pathlib_remote_file_list = [pl.Path(x) for x in dec_remote_file_list]
+        files_not_on_server = globals.get_list_difference(local_file_list, pathlib_remote_file_list)
+        files_not_on_client = globals.get_list_difference(pathlib_remote_file_list, local_file_list)
+        for file in files_not_on_server:
+            self.send_file(file)
+        for file in files_not_on_client:
+            self.get_file(file)
 
     def close_client(self):
         """Close all observers observing a folder"""
@@ -117,12 +122,12 @@ class Client:
 def start_user_interface():
     figlet = Figlet()
     try:
-        clear_screen()
-        username = input("Username:")
-        password = input("Password:")
-        clear_screen()
-        welcome = "Welcome " + username + " !"
-        print(figlet.renderText(welcome))
+        # clear_screen()
+        # username = input("Username:")
+        # password = input("Password:")
+        # clear_screen()
+        # welcome = "Welcome " + username + " !"
+        # print(figlet.renderText(welcome))
         # sleep(1.5)
         clear_screen()
         while True:
@@ -133,7 +138,7 @@ def start_user_interface():
                 print(get_help())
             if command == "sync" or command == "s":
                 print("Syncing...")
-                print("(not implemented)")
+                client.sync_files()
             if command == "ls" or command == "lf" or command == "local files":
                 print("Local files:")
                 print_local_files()
@@ -145,6 +150,10 @@ def start_user_interface():
                 print("(not implemented)")
             if command == "diff" or command == "d":
                 print_diff_to_server()
+            if command == 'exit' or command == 'e':
+                client.close_client()
+                clear_screen(print_logo=False)
+                break
             else:
                 print(get_help())
 
@@ -165,7 +174,6 @@ def print_remote_files():
     else:
         dec_remote_file_list = client.file_crypt.decrypt_file_list(enc_remote_file_list)
         print_list(dec_remote_file_list)
-
 
 
 def print_local_files():
@@ -213,6 +221,7 @@ Available commands:
     Remote_files (rf, remote files)
     Get_file (gf, get file)
     Diff_local/remote (diff, d)
+    Exit (e, exit)
                     """
     return help
 

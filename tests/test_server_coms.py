@@ -46,4 +46,5 @@ class TestServercoms(unittest.TestCase):
         return enc_file_path, additional_data
 
     def tearDown(self):
+        self.serverComs.register_deletion_of_file(self.enc.encrypt_relative_file_path(self.relative_file_path))
         globals.clear_tmp()
