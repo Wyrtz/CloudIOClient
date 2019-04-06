@@ -34,9 +34,8 @@ class TestClient(unittest.TestCase):
         self.assertNotIn(random_file_relative_path, file_list_dec)
 
     def test_retrieve_file_from_server(self):
-        """Create new file in tmp folder, send it to server, and delete it locally. Fetch it"""
         """Create new file, make sure it is uploaded, delete it locally, get it back"""
-        #Create file, wait, check if it was uploaded
+        # Create file, wait, check if it was uploaded
         random_file_path = self.create_random_file()
         random_file_relative_path = random_file_path.relative_to(globals.WORK_DIR)
         random_file_name = pl.Path(random_file_path.name)
@@ -55,14 +54,12 @@ class TestClient(unittest.TestCase):
         sleep(self.sleep_time)
         self.assertIn(random_file_name, self.client.get_local_file_list())
 
-
     def tearDown(self):
         for file in self.random_files_list:
             if pl.Path.exists(file):
                 pl.Path.unlink(file)
         globals.clear_tmp()
         self.client.close_client()
-
 
     def create_random_file(self, path=globals.FILE_FOLDER):
         random_file_name = os.urandom(8).hex()

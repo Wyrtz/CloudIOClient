@@ -91,17 +91,15 @@ class Client:
         return file_list
 
     def sync_files(self):  # TODO: Refactor this.
-        response = self.servercoms.get_file_list()
-        server_files = list(response.json())
-        client_files = self.get_local_file_list()
-        print("server files: ", server_files)
-        print("client_files", client_files)
-        # for remote_file in server_files:
-        #     if remote_file not in client_files:
-        #         self.servercoms.get_file(remote_file)
-        # todo: FINNISH THIS!
-        # todo: Test this!
-        # todo: handle file not found, no connection etc. !
+        local_file_names = self.get_local_file_list()
+        enc_remote_file_names= self.servercoms.get_file_list()
+        remote_file_names = self.file_crypt.decrypt_file_list(enc_remote_file_names)
+        for name in local_file_names:
+            if name not in remote_file_names:
+                self.send_file(name)
+        for name in remote_file_names:
+            if name not in local_file_names:
+                self.get_file(name)
 
     def close_client(self):
         """Close all observers observing a folder"""
@@ -109,6 +107,7 @@ class Client:
             observer.stop()
         for observer in self.observers_list:
             observer.join()
+
 
 def start_user_interface():
     figlet = Figlet()
@@ -151,6 +150,7 @@ def print_remote_files():
     else:
         print(remote_file_list)
 
+
 def print_local_files():
     local_file_list = client.get_local_file_list()
     if len(local_file_list) == 0:
@@ -169,6 +169,7 @@ def clear_screen():
     figlet = Figlet()
     print(figlet.renderText(globals.PROJECT_NAME))
 
+
 def get_help():
     help = """
 Available commands:
@@ -179,6 +180,7 @@ Available commands:
     Get_file (gf, get file)
                     """
     return help
+
 
 if __name__ == "__main__":
     serverIP = 'wyrnas.myqnapcloud.com:8000'
