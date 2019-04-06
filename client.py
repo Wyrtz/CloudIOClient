@@ -56,9 +56,12 @@ class Client:
         self.handler_thread.start()
         # Start initial folder observer
         self.observers_list = []
-        self.start_folder_observer(self.file_folder)
+        self.start_observing()
 
-    def start_folder_observer(self, file_folder_path):
+    def start_observing(self):
+        self.start_new_folder_observer(self.file_folder)
+
+    def start_new_folder_observer(self, file_folder_path):
         new_observer = Observer()
         handler = MyHandler(self.servercoms, self.file_crypt)
         new_observer.schedule(handler, str(file_folder_path), recursive=True)
@@ -68,9 +71,8 @@ class Client:
     def get_file(self, file_name):
         """Encrypt the name, send a request and get back either '404' or a file candidate.
            If the candidate is valid and newer, keep it."""
-        enc_file_name = FileCryptography.encrypt_relative_file_path(file_name)
         try:
-            tmp_enc_file_path, additional_data = self.servercoms.get_file(enc_file_name)
+            tmp_enc_file_path, additional_data = self.servercoms.get_file(file_name)
         except FileNotFoundError:
             print("File not found on server.")
             return
@@ -78,20 +80,18 @@ class Client:
                                      additional_data=additional_data)
         os.remove(tmp_enc_file_path)
 
-    def get_folder_list(self):
+    def get_local_file_list(self):
         """Return a list where each element is the string name of this file"""
         # ToDo: recursive (folders)
-        # ToDO: PathLib!
-        files = os.listdir(self.folder)
-        file_list = []
-        for name in files:
-            file_list.append(name)
+        # ToDO: PathLib? No os.listdir function
+        file_list = os.listdir(self.file_folder)
+        file_list = [pl.Path(x) for x in file_list]
         return file_list
 
     def sync_files(self):  # TODO: Refactor this.
         response = self.servercoms.get_file_list()
         server_files = list(response.json())
-        client_files = self.get_folder_list()
+        client_files = self.get_local_file_list()
         print("server files: ", server_files)
         print("client_files", client_files)
         # for remote_file in server_files:

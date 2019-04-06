@@ -1,5 +1,7 @@
 import os
 import pathlib as pl
+from asyncio import sleep
+
 
 def get_CloudIOClient_path():
     curdir = pl.Path.cwd()
@@ -34,4 +36,8 @@ KEY_SALT = pl.Path.joinpath(WORK_DIR, 'key_salt.txt')
 def clear_tmp():
     for file in os.listdir(TEMPORARY_FOLDER):
         file_path = os.path.join(TEMPORARY_FOLDER, file)
-        os.unlink(file_path)
+        try:
+            os.unlink(file_path)
+        except PermissionError:
+            sleep(0.1)
+            clear_tmp()

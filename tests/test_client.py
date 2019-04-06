@@ -11,7 +11,7 @@ class TestClient(unittest.TestCase):
 
     def setUp(self):
         self.client = Client()
-        self.sleep_time = 2
+        self.sleep_time = 1
         self.random_files_list = []
 
     def test_created_file_is_uploaded(self):
@@ -33,15 +33,40 @@ class TestClient(unittest.TestCase):
         file_list_dec = self.client.file_crypt.decrypt_file_list(file_list_enc)
         self.assertNotIn(random_file_relative_path, file_list_dec)
 
-    def tearDown(self):
+    def test_retrieve_file_from_server(self):
+        """Create new file in tmp folder, send it to server, and delete it locally. Fetch it"""
+        """Create new file, make sure it is uploaded, delete it locally, get it back"""
+        #Create file, wait, check if it was uploaded
+        random_file_path = self.create_random_file()
+        random_file_relative_path = random_file_path.relative_to(globals.WORK_DIR)
+        random_file_name = pl.Path(random_file_path.name)
+        sleep(self.sleep_time)
+        file_list_enc = self.client.servercoms.get_file_list()
+        file_list_dec = self.client.file_crypt.decrypt_file_list(file_list_enc)
+        self.assertIn(random_file_relative_path, file_list_dec)
+        # Delete the file locally, "close client" such that the server is not asked to also delete (archive)
         self.client.close_client()
-        globals.clear_tmp()
-        for file in self.random_files_list:
-            pl.Path.unlink(file)
+        sleep(0.2)
+        pl.Path.unlink(random_file_path)
+        self.assertNotIn(random_file_name, self.client.get_local_file_list())
+        # Get file back, make sure we got it
+        enc_file_name = self.client.file_crypt.encrypt_relative_file_path(random_file_relative_path)
+        self.client.get_file(enc_file_name)
+        sleep(self.sleep_time)
+        self.assertIn(random_file_name, self.client.get_local_file_list())
 
-    def create_random_file(self):
+
+    def tearDown(self):
+        for file in self.random_files_list:
+            if pl.Path.exists(file):
+                pl.Path.unlink(file)
+        globals.clear_tmp()
+        self.client.close_client()
+
+
+    def create_random_file(self, path=globals.FILE_FOLDER):
         random_file_name = os.urandom(8).hex()
-        random_file_path = pl.Path.joinpath(globals.FILE_FOLDER, random_file_name)
+        random_file_path = pl.Path.joinpath(path, random_file_name)
         self.random_files_list.append(random_file_path)
         with open(random_file_path, 'wb') as new_file:
             new_file.write(os.urandom(1024))
