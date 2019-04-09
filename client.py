@@ -50,6 +50,7 @@ class Client:
     def get_file(self, file_name):
         """Encrypt the name, send a request and get back either '404' or a file candidate.
            If the candidate is valid and newer, keep it."""
+        globals.DOWNLOADED_FILE_QUEUE.append(file_name)
         enc_file_name = self.file_crypt.encrypt_relative_file_path(file_name)
         try:
             tmp_enc_file_path, additional_data = self.servercoms.get_file(str(enc_file_name))
@@ -58,7 +59,11 @@ class Client:
             return
         self.file_crypt.decrypt_file(tmp_enc_file_path,  # TODO: If doesn't validate, does it overwrite?
                                      additional_data=additional_data)
-        os.remove(tmp_enc_file_path)
+        pl.Path.unlink(tmp_enc_file_path)
+
+    def delete_file(self, file_name: pl.Path):
+        enc_path = self.file_crypt.encrypt_relative_file_path(file_name)
+        self.servercoms.register_deletion_of_file(enc_path)
 
     def get_local_file_list(self):
         """Return a list where each element is the string name of this file"""
