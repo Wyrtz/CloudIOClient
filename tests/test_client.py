@@ -21,6 +21,12 @@ class TestClient(unittest.TestCase):
 
     def tearDown(self):
         self.ste.recover_resources()
+        self.client.start_observing()
+        for file in self.random_files_list:
+            if pl.Path.exists(file):
+                pl.Path.unlink(file)
+        globals.clear_tmp()
+        self.client.close_client()
 
     def test_created_file_is_uploaded(self):  # TODO: refactor server such that get_file_list returns nonces as well.
         """Create a new random file and place it in files folder for upload"""
@@ -62,14 +68,6 @@ class TestClient(unittest.TestCase):
         self.client.get_file(random_file_relative_path)
         sleep(self.sleep_time)
         self.assertIn(random_file_relative_path, self.client.get_local_file_list())
-
-    def tearDown(self):
-        self.client.start_observing()
-        for file in self.random_files_list:
-            if pl.Path.exists(file):
-                pl.Path.unlink(file)
-        globals.clear_tmp()
-        self.client.close_client()
 
     def create_random_file(self, path=globals.FILE_FOLDER):
         """Create a random file in the file folder, give back the path"""

@@ -10,8 +10,9 @@ from tests import setup_test_environment as ste
 class TestKeyDerivation(unittest.TestCase):
 
     def setUp(self):
+        self.username = "abe"
         self.pw = '12345'
-        self.kd = keyderivation.KeyDerivation('12345')
+        self.kd = keyderivation.KeyDerivation(self.username)
         self.ste = ste.global_test_configer(self.kd)
 
     def tearDown(self):

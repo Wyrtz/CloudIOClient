@@ -28,12 +28,14 @@ class KeyDerivation:
 
     def derive_key(self, pw, verify=True):  # Assume at first the PW is correct, then check if key is correct.
         key = self.derive_key_unverified(pw)
+        print(key)
         if verify and not self.key_verifies(key):
             raise BadKeyException
         return key
 
     def key_verifies(self, key):  # Check by compare hashing with stored hash of key.
         hashes = self.get_hashes_of_keys()
+        print(hashes)
         if len(hashes) == 0:
             return False
         return hashes[-1] == self.hash_key(key)
