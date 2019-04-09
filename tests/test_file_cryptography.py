@@ -3,43 +3,83 @@ import pathlib as pl
 import cryptography
 import unittest
 
+from security import keyderivation
 from security.filecryptography import FileCryptography
 from resources import globals
+from tests import test_keyderivation
 
 
 class test_file_cryptography(unittest.TestCase):
     def setUp(self):
         self.file_name = "client.txt"
-        self.file_crypt = FileCryptography()
         self.file_path = pl.PurePath.joinpath(globals.TEST_FILE_FOLDER, self.file_name)
+        self.kd = keyderivation.KeyDerivation('12345')
+        try:
+            self.key_hashes_to_save = self.kd.get_hashes_of_keys()
+            pl.Path(globals.KEY_HASHES).unlink()
+        except FileNotFoundError:  # File might not exist.
+            pass
+        try:
+            self.enc_old_keys = self.kd.get_enc_old_keys()
+            pl.Path(globals.ENC_OLD_KEYS).unlink()
+        except FileNotFoundError:  # File might not exist.
+            pass
+        self.file_crypt = self.kd.select_first_pw("asd")
+
+    def tearDown(self):
+        try:
+            self.recover_key_hashes(self.key_hashes_to_save)
+        except AttributeError:  # If file not found attribute doesn't exist.
+            try:
+                pl.Path(globals.KEY_HASHES).unlink()
+            except FileNotFoundError:
+                pass  # Shouldn't exist and doesn't already
+        try:
+            self.recover_enc_old_keys(self.enc_old_keys)
+        except AttributeError:  # If file not found attribute doesn't exist.
+            try:
+                pl.Path(globals.ENC_OLD_KEYS).unlink()
+            except FileNotFoundError:
+                pass  # Shouldn't exist and doesn't already
+        globals.clear_tmp()
 
     def test_encrypt_decrypt(self):
         start_file = ""
         end_file = ""
         with open(self.file_path, "rt") as file:
             start_file = file.read()
-        file_encrypted, additional_data = self.file_crypt.encrypt_file(self.file_path)
-        file_decrypted = self.file_crypt.decrypt_file(file_path=file_encrypted, additional_data=additional_data)
+        nonce1 = globals.get_nonce()
+        nonce2 = globals.get_nonce()
+        file_encrypted, additional_data = self.file_crypt.encrypt_file(
+            self.file_path,
+            nonce1,
+            nonce2)
+        file_decrypted = self.file_crypt.decrypt_file(
+            file_path=file_encrypted,
+            additional_data=additional_data)
         with open(file_decrypted, "rt") as file:
            end_file = file.read()
         self.assertEqual(start_file, end_file, "Files differ!")
 
     def test_invalid_tag(self):
-        file_encrypted, additional_data = self.file_crypt.encrypt_file(self.file_path)
+        nonce1 = globals.get_nonce()
+        nonce2 = globals.get_nonce()
+        file_encrypted, additional_data = self.file_crypt.encrypt_file(self.file_path, nonce1, nonce2)
         with open(file_encrypted, "ab") as file:
             file.write(b'hejjj')
         self.assertRaises(cryptography.exceptions.InvalidTag,
                           self.file_crypt.decrypt_file,
                           file_encrypted, additional_data)
 
-    def test_key_and_salt_saved(self):
-        og_salt = self.file_crypt.salt
-        og_key = self.file_crypt.key
-        file_crypt = FileCryptography()
-        new_salt = file_crypt.salt
-        new_key = file_crypt.key
-        self.assertEqual(og_salt, new_salt, "Salt changed!")
-        self.assertEqual(og_key, new_key, "key changed!")
+    def recover_enc_old_keys(self, enc_old_keys):
+        for ct_nonce_pair in enc_old_keys:
+            ct = ct_nonce_pair[0]
+            nonce = ct_nonce_pair[1]
+            self.kd.append_enc_key_ct_to_enc_keys_file(ct, nonce)
 
-    def tearDown(self) -> None:
-        globals.clear_tmp()
+    def recover_key_hashes(self, hashes_of_keys):
+        hashes_str = ""
+        for key_hash in hashes_of_keys:
+            hashes_str += key_hash + "\n"
+        with open(globals.KEY_HASHES, 'w') as file:
+            file.write(hashes_str)

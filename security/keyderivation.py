@@ -13,9 +13,10 @@ class KeyDerivation:
     def __init__(self, salt):
         if type(salt) is str:
             salt = bytes(salt, 'utf-8')
-        self.salt = salt  # TODO: refactor such that salt is generated randomly and stored with enc of pw to recover old.
+        self.salt = salt
         self.kdf = self.new_scrypt
         self.enc_keys_file_lock = Lock()
+        self.key_hashes_lock = Lock()
 
     def new_scrypt(self):
         return Scrypt(salt=self.salt,  # Should be constant, but randomly chosen. Stored locally.
@@ -32,7 +33,7 @@ class KeyDerivation:
         return key
 
     def key_verifies(self, key):  # Check by compare hashing with stored hash of key.
-        return get_hashes_of_keys()[-1] == self.hash_key(key)
+        return self.get_hashes_of_keys()[-1] == self.hash_key(key)
 
     def hash_key(self, key):
         hasher = sha3_512()
@@ -52,12 +53,15 @@ class KeyDerivation:
         return key.hex()
 
     def store_hash_of_key(self, key):  # Store hash to later compare with another key.
+        self.key_hashes_lock.acquire()
         hash_of_key = self.hash_key(key)  # TODO: hash many iterations?
-        # TODO: Add lock on salt (although why would you need it when only 1 instance should ever access it).
         with open(globals.KEY_HASHES, 'a') as file:
             file.write(hash_of_key + "\n")
+        self.key_hashes_lock.release()
 
     def replace_pw(self, old_pw, new_pw):  # It's called future security!
+        if not self.has_password():
+            raise IllegalMethodUsageException()
         old_key = self.derive_key(old_pw)
         new_key = self.derive_key(new_pw, False)
         file_crypt = filecryptography.FileCryptography(new_key)
@@ -68,6 +72,8 @@ class KeyDerivation:
         return file_crypt
 
     def select_first_pw(self, pw):
+        if self.has_password():
+            raise IllegalMethodUsageException()
         key = self.derive_new_key(pw)
         file_crypt = filecryptography.FileCryptography(key)
         return file_crypt
@@ -76,25 +82,76 @@ class KeyDerivation:
         self.enc_keys_file_lock.acquire()
         if not pl.Path(globals.ENC_OLD_KEYS).exists():
             with open(globals.ENC_OLD_KEYS, 'w') as file:
-                file.write(key_ct.hex() + " & " + nonce.hex() + "\n")
+                file.write(key_ct + " & " + nonce + "\n")
         else:
             with open(globals.ENC_OLD_KEYS, 'a') as file:
-                file.write(key_ct.hex() + " & " + nonce.hex() + "\n")
+                file.write(key_ct + " & " + nonce + "\n")
         self.enc_keys_file_lock.release()
 
+    def retrieve_keys(self, current_key):
+        '''
+        To retrieve old keys we need their
+        - hashes to verify,
+        - cypher texts
+        - nonces
+        Since key_0 = dec(dec(...(key_curr, nonce_curr), nonce_curr-1)...), nonce_0)
+        we need to work our way from most recent to oldest key.
+        While doing this we can verify if key_i is correct as it should hash to the hash_i.
+        '''
+        successor_key = current_key  # The former key is encrypted under its successor and the nonce given.
+        old_enc_keys = self.get_enc_old_keys()
+        key_hashes_stored = self.get_hashes_of_keys()
+        key_hashes_stored.reverse()  # Most recent, last added at bottom, first to decrypt.
+        # We now have [[ct_curr-1, nonce_curr-1], ..., [ct_0, nonce_0]] & [hash_curr, hash_curr-1, ..., hash_0]
+        keys = [successor_key]  # The list of reconstructed keys.
+        if not key_hashes_stored[0] == self.hash_key(successor_key):  # Is hash(key) == hash(key_curr)?
+            raise BadKeyException  # If not; bad key.
+        for idx, ct_nonce_pair in enumerate(old_enc_keys):
+            ct = ct_nonce_pair[0]
+            nonce = ct_nonce_pair[1]
+            file_crypt = filecryptography.FileCryptography(successor_key)  # ... the previous key.
+            successor_key = file_crypt.decrypt_key(ct, nonce)  # With those we decrypt.
+            hash_of_key = self.hash_key(successor_key)
+            if not hash_of_key == key_hashes_stored[idx + 1]:  # We then verify the hash is correct.
+                raise BadKeyException  # If not, bad key we decrypted. Assuming hash is correct only pw can be at fault.
+            keys.append(successor_key)  # If is good hash, store it and continue to the next.
+        return keys
 
-# TODO: Could append hash of key to additional data of file such that we can test fast if file is enc under the ith key.
-'''
-    def retrieve_old_keys(self, latest_key)
-      # Retrieves all old keys by recursively recovering them?
-'''
+    def get_enc_old_keys(self):
+        self.enc_keys_file_lock.acquire()
+        if not pl.Path(globals.ENC_OLD_KEYS).exists():
+            self.enc_keys_file_lock.release()
+            raise FileNotFoundError
+        with open(globals.ENC_OLD_KEYS, 'r') as file:
+            old_enc_keys_str = file.read()
+        self.enc_keys_file_lock.release()
+        old_enc_keys_str_arr = old_enc_keys_str.rsplit('\n')
+        old_enc_keys = []
+        for s in old_enc_keys_str_arr:
+            if s == "":  # There will be an empty entry at the end - Just ignore it.
+                continue
+            old_enc_keys = [s.rsplit(" & ")] + old_enc_keys  # first in, last out; this is the order we need to dec.
+        return old_enc_keys
 
+    def get_hashes_of_keys(self):
+        self.key_hashes_lock.acquire()
+        try:
+            with open(globals.KEY_HASHES, 'r') as file:
+                hashes_str = file.read()
+        except FileNotFoundError:
+            self.key_hashes_lock.release()
+            return []
+        self.key_hashes_lock.release()
+        return hashes_str.rsplit('\n')[:-1]  # The last item is "".
 
-def get_hashes_of_keys():
-    with open(globals.KEY_HASHES, 'r') as file:
-        hashes_str = file.read()
-    return hashes_str.rsplit('\n')[:-1]  # The last item is "".
+    def has_password(self):
+        return len(self.get_hashes_of_keys()) != 0
+        # Only way we can know if we have a pw is if we have something to compare it with.
 
 
 class BadKeyException(Exception):
+    pass
+
+
+class IllegalMethodUsageException(Exception):
     pass

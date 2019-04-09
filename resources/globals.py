@@ -47,4 +47,4 @@ def clear_tmp():
 
 
 def get_nonce(length=12):
-    return secrets.token_bytes(length)
+    return secrets.token_bytes(length).hex()

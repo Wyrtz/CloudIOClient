@@ -15,19 +15,26 @@ class FileCryptography:
         self.aesgcm = AESGCM(key=bytes.fromhex(key))
 
     def encrypt_relative_file_path(self, relative_file_path, nonce):
-        return self.aesgcm.encrypt(nonce, bytes(str(relative_file_path), 'utf-8'), associated_data=None).hex() + ".cio"
+        return self.aesgcm.encrypt(
+            bytes(nonce, 'utf-8'),
+            bytes(str(relative_file_path), 'utf-8'),
+            associated_data=None).hex() + ".cio"
 
     def encrypt_file(self, file_path, nonce1, nonce2):
         """Encrypt file_path and return path of the encrypted file"""
         relative_file_path = file_path.relative_to(globals.WORK_DIR)
-        enc_file_name = self.encrypt_relative_file_path(relative_file_path)
+        enc_file_name = self.encrypt_relative_file_path(relative_file_path, nonce1)
+
         curr_time = time.time()
-        additional_data = {'t': curr_time, 'n': enc_file_name}
+        additional_data = {'t': curr_time, 'n': enc_file_name, 'nonce1': nonce1, 'nonce2': nonce2}
         additional_data_json = json.dumps(additional_data)
+
         enc_file_path = pl.Path.joinpath(pl.Path(globals.TEMPORARY_FOLDER), enc_file_name)
         with open(file_path, 'rb') as file:
-            enc_file_data = self.aesgcm.encrypt(self.salt, file.read(),
-                                                associated_data=bytes(additional_data_json, 'utf-8'))
+            enc_file_data = self.aesgcm.encrypt(
+                bytes(nonce2, 'utf-8'),
+                file.read(),
+                associated_data=bytes(additional_data_json, 'utf-8'))
             try:
                 with open(enc_file_path, "wb") as enc_file:
                     enc_file.write(enc_file_data)
@@ -47,11 +54,17 @@ class FileCryptography:
             raise TypeError
         enc_file_name = file_path.stem
         byte_file_name = bytes.fromhex(enc_file_name)
-        dec_file_name = self.aesgcm.decrypt(self.salt, byte_file_name, associated_data=None).decode('utf-8')
+        dec_file_name = self.aesgcm.decrypt(
+            bytes(additional_data['nonce1'], 'utf-8'),
+            byte_file_name,
+            associated_data=None).decode('utf-8')
         dec_file_path = pl.PurePath.joinpath(globals.WORK_DIR, dec_file_name)
         additional_data_json = json.dumps(additional_data)
         with open(file_path, 'rb') as file:
-            dec_file_data = self.aesgcm.decrypt(self.salt, file.read(), associated_data=bytes(additional_data_json, 'utf-8'))
+            dec_file_data = self.aesgcm.decrypt(
+                bytes(additional_data['nonce2'], 'utf-8'),
+                file.read(),
+                associated_data=bytes(additional_data_json, 'utf-8'))
             with open(dec_file_path, "wb+") as dec_file:
                 dec_file.write(dec_file_data)
         globals.DOWNLOADED_FILE_QUEUE.append(dec_file_name)
@@ -66,7 +79,10 @@ class FileCryptography:
         return dec_file_name_list
 
     def encrypt_key(self, key, nonce):
-        return self.aesgcm.encrypt(nonce, bytes.fromhex(key), associated_data=None)
+        return self.aesgcm.encrypt(bytes.fromhex(nonce), bytes.fromhex(key), associated_data=None).hex()
+
+    def decrypt_key(self, ct, nonce):
+        return self.aesgcm.decrypt(bytes.fromhex(nonce), bytes.fromhex(ct), associated_data=None).hex()
 
     def safe_secrets(self):  # TODO: Remove unused and depricated func
         file = open(self.key_path, 'wb')
