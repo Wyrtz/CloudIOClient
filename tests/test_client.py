@@ -15,20 +15,22 @@ class TestClient(unittest.TestCase):
         self.random_files_list = []
 
     def test_created_file_is_uploaded(self):
-        # Create a new random file and place it in files folder for upload
+        """Create a new random file and place it in files folder for upload"""
         random_file_path = self.create_random_file().relative_to(globals.WORK_DIR)
         sleep(self.sleep_time)
         file_list_enc = self.client.servercoms.get_file_list()
         file_list_dec = self.client.file_crypt.decrypt_file_list(file_list_enc)
         self.assertIn(random_file_path, file_list_dec)
 
-    def test_delete_files(self):
+    def test_delete_file(self):
+        """Create file, delete it, check if it is deleted on server"""
         random_file_path = self.create_random_file()
         random_file_relative_path = random_file_path.relative_to(globals.WORK_DIR)
-        sleep(0.5)
+        sleep(1)
         pl.Path.unlink(random_file_path)
         self.random_files_list.remove(random_file_path)
         sleep(self.sleep_time)
+        self.assertNotIn(random_file_relative_path, self.client.get_local_file_list())
         file_list_enc = self.client.servercoms.get_file_list()
         file_list_dec = self.client.file_crypt.decrypt_file_list(file_list_enc)
         self.assertNotIn(random_file_relative_path, file_list_dec)
@@ -49,12 +51,12 @@ class TestClient(unittest.TestCase):
         pl.Path.unlink(random_file_path)
         self.assertNotIn(random_file_name, self.client.get_local_file_list())
         # Get file back, make sure we got it
-        enc_file_name = self.client.file_crypt.encrypt_relative_file_path(random_file_relative_path)
-        self.client.get_file(enc_file_name)
+        self.client.get_file(random_file_relative_path)
         sleep(self.sleep_time)
-        self.assertIn(random_file_name, self.client.get_local_file_list())
+        self.assertIn(random_file_relative_path, self.client.get_local_file_list())
 
     def tearDown(self):
+        self.client.start_observing()
         for file in self.random_files_list:
             if pl.Path.exists(file):
                 pl.Path.unlink(file)
@@ -62,6 +64,7 @@ class TestClient(unittest.TestCase):
         self.client.close_client()
 
     def create_random_file(self, path=globals.FILE_FOLDER):
+        """Create a random file in the file folder, give back the path"""
         random_file_name = os.urandom(8).hex()
         random_file_path = pl.Path.joinpath(path, random_file_name)
         self.random_files_list.append(random_file_path)

@@ -2,6 +2,10 @@ import json
 import pathlib as pl
 from json import JSONDecodeError
 
+import urllib3
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
 import requests
 
 from resources import globals
@@ -25,7 +29,7 @@ class ServComs():
                                             'additional_data': bytes(json.dumps(additional_data), 'utf-8')},
                                      verify=self.verify)
             response.raise_for_status()
-            print("File successfully send")
+            return True
 
     def get_file(self, enc_file_name):
         """Retrive enc_file_name from server and place it in tmp (ready for decryption)"""

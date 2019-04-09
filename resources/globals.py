@@ -13,6 +13,7 @@ def get_CloudIOClient_path():
         idx += 1
     return curdir.parents[idx]
 
+
 def create_folders():
     if not os.path.isdir(TEMPORARY_FOLDER):
         os.mkdir(TEMPORARY_FOLDER)
@@ -44,6 +45,10 @@ def clear_tmp():
         except PermissionError:
             sleep(0.1)
             clear_tmp()
+
+
+def get_list_difference(list_1: list,list_2: list) -> list:
+    return [x for x in list_1 if x not in list_2]
 
 
 def get_nonce(length=12):
