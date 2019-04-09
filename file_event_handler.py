@@ -1,9 +1,9 @@
 from watchdog.events import FileSystemEventHandler
 
 from ServerComs import ServComs
-from filecryptography import FileCryptography
+from security.filecryptography import FileCryptography
 import pathlib as pl
-import globals
+from resources import globals
 
 
 class MyHandler(FileSystemEventHandler):

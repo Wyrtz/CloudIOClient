@@ -33,11 +33,14 @@ class KeyDerivation:
         return key
 
     def key_verifies(self, key):  # Check by compare hashing with stored hash of key.
-        return self.get_hashes_of_keys()[-1] == self.hash_key(key)
+        hashes = self.get_hashes_of_keys()
+        if len(hashes) == 0:
+            return False
+        return hashes[-1] == self.hash_key(key)
 
     def hash_key(self, key):
         hasher = sha3_512()
-        hasher.update(bytes("hash key salt", 'utf-8'))  # Its another salt. TODO: random salt?
+        hasher.update(bytes("hash key salt", 'utf-8'))  # Its another salt. TODO: random salt? Perhaps username?
         hasher.update(bytes.fromhex(key))
         return hasher.digest().hex()
 
@@ -68,7 +71,7 @@ class KeyDerivation:
         nonce = globals.get_nonce()
         enc_old_key = file_crypt.encrypt_key(old_key, nonce)
         self.append_enc_key_ct_to_enc_keys_file(enc_old_key, nonce)
-        assert self.derive_new_key(new_pw) == new_key  # If wrong something went horribly wrong.
+        self.store_hash_of_key(new_key)
         return file_crypt
 
     def select_first_pw(self, pw):
@@ -89,7 +92,7 @@ class KeyDerivation:
         self.enc_keys_file_lock.release()
 
     def retrieve_keys(self, current_key):
-        '''
+        """
         To retrieve old keys we need their
         - hashes to verify,
         - cypher texts
@@ -97,7 +100,7 @@ class KeyDerivation:
         Since key_0 = dec(dec(...(key_curr, nonce_curr), nonce_curr-1)...), nonce_0)
         we need to work our way from most recent to oldest key.
         While doing this we can verify if key_i is correct as it should hash to the hash_i.
-        '''
+        """
         successor_key = current_key  # The former key is encrypted under its successor and the nonce given.
         old_enc_keys = self.get_enc_old_keys()
         key_hashes_stored = self.get_hashes_of_keys()
@@ -110,12 +113,12 @@ class KeyDerivation:
             ct = ct_nonce_pair[0]
             nonce = ct_nonce_pair[1]
             file_crypt = filecryptography.FileCryptography(successor_key)  # ... the previous key.
-            successor_key = file_crypt.decrypt_key(ct, nonce)  # With those we decrypt.
+            successor_key = file_crypt.decrypt_key(ct, nonce)  # With those we decrypt. Successor_key technically predecessor
             hash_of_key = self.hash_key(successor_key)
             if not hash_of_key == key_hashes_stored[idx + 1]:  # We then verify the hash is correct.
                 raise BadKeyException  # If not, bad key we decrypted. Assuming hash is correct only pw can be at fault.
             keys.append(successor_key)  # If is good hash, store it and continue to the next.
-        return keys
+        return keys  # TODO: refactor to return filecryptos.
 
     def get_enc_old_keys(self):
         self.enc_keys_file_lock.acquire()

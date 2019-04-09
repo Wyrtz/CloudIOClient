@@ -43,9 +43,10 @@ class FileCryptography:
                     print("Please enable NTFS long paths in your system.(Filesystem Registry entry)")
         return enc_file_path, additional_data
 
-    def decrypt_relative_file_path(self, enc_file_name: pl.Path):
+    def decrypt_relative_file_path(self, enc_file_name: pl.Path, nonce):
         enc_file_name = bytes.fromhex(str(enc_file_name.stem))
-        return self.aesgcm.decrypt(self.salt, enc_file_name, associated_data=None)
+        return self.aesgcm.decrypt(
+            self.salt, enc_file_name, associated_data=None)
 
     def decrypt_file(self, file_path, additional_data):
         """Decrypt file_name and return name of the decrypted file"""

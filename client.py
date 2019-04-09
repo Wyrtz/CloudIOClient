@@ -3,6 +3,7 @@ import pathlib as pl
 from threading import Thread
 from time import sleep
 from ServerComs import ServComs
+from security import keyderivation
 from security.filecryptography import FileCryptography
 from file_event_handler import MyHandler
 from watchdog.observers import Observer
@@ -11,11 +12,11 @@ from resources import globals
 
 class Client:
 
-    def __init__(self, server_location=globals.SERVER_LOCATION, file_folder=globals.FILE_FOLDER):
+    def __init__(self, username, password, server_location=globals.SERVER_LOCATION, file_folder=globals.FILE_FOLDER):
         self.server_location = server_location
         self.file_folder = file_folder
         self.servercoms = ServComs(server_location)
-        self.file_crypt = FileCryptography()
+        self.file_crypt = FileCryptography(keyderivation.KeyDerivation(username).derive_key(password))  # TODO: Username?
         self.handler_thread = Thread(target=MyHandler, args=(self.servercoms, self.file_crypt, self))
         self.handler_thread.start()
         # Start initial folder observer
@@ -34,7 +35,7 @@ class Client:
 
     def send_file(self, file_path):
         try:
-            enc_file_path, additional_data = self.file_crypt.encrypt_file(file_path)
+            enc_file_path, additional_data = self.file_crypt.encrypt_file(file_path, globals.get_nonce(), globals.get_nonce())
             success = self.servercoms.send_file(enc_file_path, additional_data)
         except PermissionError:
             print("Unable to send file immediately...")
@@ -93,10 +94,3 @@ class Client:
             observer.stop()
         for observer in self.observers_list:
             observer.join()
-
-if __name__ == "__main__":
-    from CLI import CLI
-    serverIP = 'wyrnas.myqnapcloud.com:8000'
-    client = Client(serverIP)
-    cli = CLI(client)
-

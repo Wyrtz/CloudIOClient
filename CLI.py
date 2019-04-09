@@ -1,22 +1,23 @@
 import os
 import platform
+from time import sleep
 
 from pyfiglet import Figlet
 from colorama import Fore
 from colorama import Style
 import colorama
 
-import globals
+from resources import globals
 import pathlib as pl
 
-
+from client import Client
+from security import keyderivation
+from security.keyderivation import BadKeyException
 
 
 class CLI:
 
-    def __init__(self, client):
-        from client import Client
-        self.client = client
+    def __init__(self):
         self.start_user_interface()
         colorama.init()
 
@@ -24,13 +25,23 @@ class CLI:
         """While loop that reads input and calls associated functions"""
         figlet = Figlet()
         try:
-            # clear_screen()
-            # username = input("Username:")
-            # password = input("Password:")
-            # clear_screen()
-            # welcome = "Welcome " + username + " !"
-            # print(figlet.renderText(welcome))
-            # sleep(1.5)
+            self.clear_screen()
+            username = input("Username:")
+            password = input("Password:")
+            if not pl.Path(globals.KEY_HASHES).exists():
+                keyderivation.KeyDerivation(username).select_first_pw(password)  # TODO: Username?
+            self.clear_screen()
+            try:
+                self.client = Client(username, password)
+            except BadKeyException:
+                self.clear_screen()
+                print(f"{Fore.RED}Wrong username or password{Style.RESET_ALL}")
+                input()
+                self.start_user_interface()
+            self.clear_screen(False)
+            welcome = "Welcome   " + username + " !"
+            print(figlet.renderText(welcome))
+            sleep(1.5)
             self.clear_screen()
             self.get_or_delete_avaliable = False
             while True:
@@ -183,3 +194,7 @@ Available commands:
         if self.get_or_delete_avaliable:
             help += additional
         return help
+
+if __name__ == "__main__":
+    # serverIP = 'wyrnas.myqnapcloud.com:8000'
+    cli = CLI()

@@ -4,39 +4,18 @@ import pathlib as pl
 from security import keyderivation, filecryptography
 from resources import globals
 from security.keyderivation import BadKeyException, IllegalMethodUsageException
+from tests import setup_test_environment as ste
 
 
 class TestKeyDerivation(unittest.TestCase):
 
     def setUp(self):
-        self.kd = keyderivation.KeyDerivation('12345')
         self.pw = '12345'
-        try:
-            self.key_hashes_to_save = self.kd.get_hashes_of_keys()
-            pl.Path(globals.KEY_HASHES).unlink()
-        except FileNotFoundError:  # File might not exist.
-            pass
-        try:
-            self.enc_old_keys = self.kd.get_enc_old_keys()
-            pl.Path(globals.ENC_OLD_KEYS).unlink()
-        except FileNotFoundError:  # File might not exist.
-            pass
+        self.kd = keyderivation.KeyDerivation('12345')
+        self.ste = ste.global_test_configer(self.kd)
 
     def tearDown(self):
-        try:
-            recover_key_hashes(self.key_hashes_to_save)
-        except AttributeError:  # If file not found attribute doesn't exist.
-            try:
-                pl.Path(globals.KEY_HASHES).unlink()
-            except FileNotFoundError:
-                pass  # Shouldn't exist and doesn't already
-        try:
-            self.recover_enc_old_keys(self.enc_old_keys)
-        except AttributeError:  # If file not found attribute doesn't exist.
-            try:
-                pl.Path(globals.ENC_OLD_KEYS).unlink()
-            except FileNotFoundError:
-                pass  # Shouldn't exist and doesn't already
+        self.ste.recover_resources()
 
     def test_can_derive_a_key(self):
         now = time.time()
@@ -117,16 +96,3 @@ class TestKeyDerivation(unittest.TestCase):
         self.assertTrue(len(keys) == 2)
         self.assertTrue(keys[0] == key2, "The first key should be the current key.")
         self.assertTrue(keys[1] == key1, "The second key should be the old key.")
-
-    def recover_enc_old_keys(self, enc_old_keys):
-        for ct_nonce_pair in enc_old_keys:
-            ct = ct_nonce_pair[0]
-            nonce = ct_nonce_pair[1]
-            self.kd.append_enc_key_ct_to_enc_keys_file(ct, nonce)
-
-    def recover_key_hashes(self, hashes_of_keys):
-        hashes_str = ""
-        for key_hash in hashes_of_keys:
-            hashes_str += key_hash + "\n"
-        with open(globals.KEY_HASHES, 'w') as file:
-            file.write(hashes_str)

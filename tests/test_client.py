@@ -1,20 +1,28 @@
 import unittest
 import pathlib as pl
 from time import sleep
-
 from resources import globals
 from client import Client
 import os
+from tests import setup_test_environment as ste
+from security import keyderivation
 
 
 class TestClient(unittest.TestCase):
 
     def setUp(self):
-        self.client = Client()
         self.sleep_time = 1
         self.random_files_list = []
+        self.username = "abe"
+        self.pw = '12345'
+        self.kd = keyderivation.KeyDerivation(self.username)
+        self.ste = ste.global_test_configer(self.kd)
+        self.client = Client(username=self.username, password=self.pw)
 
-    def test_created_file_is_uploaded(self):
+    def tearDown(self):
+        self.ste.recover_resources()
+
+    def test_created_file_is_uploaded(self):  # TODO: refactor server such that get_file_list returns nonces as well.
         """Create a new random file and place it in files folder for upload"""
         random_file_path = self.create_random_file().relative_to(globals.WORK_DIR)
         sleep(self.sleep_time)

@@ -1,5 +1,6 @@
 import unittest
-import globals
+from resources import globals
+
 
 class TestGlobals(unittest.TestCase):
 
