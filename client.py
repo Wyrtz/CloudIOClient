@@ -16,7 +16,11 @@ class Client:
         self.server_location = server_location
         self.file_folder = file_folder
         self.servercoms = ServComs(server_location)
-        self.file_crypt = FileCryptography(keyderivation.KeyDerivation(username).derive_key(password))  # TODO: Username?
+        self.kd = keyderivation.KeyDerivation(username)  # TODO: Username?
+        if self.kd.has_password():
+            self.file_crypt = FileCryptography(self.kd.derive_key(password))
+        else:
+            self.file_crypt = self.kd.select_first_pw(password)
         self.handler_thread = Thread(target=MyHandler, args=(self.servercoms, self.file_crypt, self))
         self.handler_thread.start()
         # Start initial folder observer
@@ -35,7 +39,9 @@ class Client:
 
     def send_file(self, file_path):
         try:
-            enc_file_path, additional_data = self.file_crypt.encrypt_file(file_path, globals.get_nonce(), globals.get_nonce())
+            enc_file_path, additional_data = self.file_crypt.encrypt_file(
+                file_path, globals.get_nonce(), globals.get_nonce()
+            )
             success = self.servercoms.send_file(enc_file_path, additional_data)
         except PermissionError:
             print("Unable to send file immediately...")
@@ -51,7 +57,8 @@ class Client:
         """Encrypt the name, send a request and get back either '404' or a file candidate.
            If the candidate is valid and newer, keep it."""
         globals.DOWNLOADED_FILE_QUEUE.append(file_name)
-        enc_file_name = self.file_crypt.encrypt_relative_file_path(file_name)
+        # TODO: implement get_nonce_of_filename(name)
+        enc_file_name = self.file_crypt.encrypt_relative_file_path(file_name, nonce)
         try:
             tmp_enc_file_path, additional_data = self.servercoms.get_file(str(enc_file_name))
         except FileNotFoundError:
@@ -76,9 +83,9 @@ class Client:
         return file_list
 
     def sync_files(self):  # TODO: Refactor this.
-        local_file_list = client.get_local_file_list()
-        enc_remote_file_list = client.servercoms.get_file_list()
-        dec_remote_file_list = client.file_crypt.decrypt_file_list(enc_remote_file_list)
+        local_file_list = self.get_local_file_list()
+        enc_remote_file_list = self.servercoms.get_file_list()
+        dec_remote_file_list = self.file_crypt.decrypt_file_list(enc_remote_file_list)
         pathlib_remote_file_list = [pl.Path(x) for x in dec_remote_file_list]
         files_not_on_server = globals.get_list_difference(local_file_list, pathlib_remote_file_list)
         files_not_on_client = globals.get_list_difference(pathlib_remote_file_list, local_file_list)

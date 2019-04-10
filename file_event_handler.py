@@ -1,3 +1,4 @@
+import numpy as np
 from watchdog.events import FileSystemEventHandler
 
 from ServerComs import ServComs
@@ -33,5 +34,12 @@ class MyHandler(FileSystemEventHandler):
         abs_path = pl.Path(event.src_path)
         relative_path = abs_path.relative_to(globals.WORK_DIR)
         print("File deleted: " + str(relative_path))
-        enc_file_name = self.file_crypt.encrypt_relative_file_path(relative_path)
+        enc_remote_file_list = self.servercoms.get_file_list()
+        relative_path_list_with_nonces = self.file_crypt.decrypt_file_list(enc_remote_file_list)  # TODO: There has got to be a better way!
+        relative_path_list = list(np.array(relative_path_list_with_nonces)[:, 0])
+        if relative_path not in relative_path_list:
+            raise NotImplemented
+        else:
+            idx = list(np.array(relative_path_list_with_nonces)[:, 0]).index(relative_path)
+        enc_file_name = self.file_crypt.encrypt_relative_file_path(relative_path, relative_path_list_with_nonces[idx][1])
         self.servercoms.register_deletion_of_file(enc_file_name)

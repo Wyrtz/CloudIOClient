@@ -1,6 +1,9 @@
 import unittest
 import pathlib as pl
 from time import sleep
+
+import numpy as np
+
 from resources import globals
 from client import Client
 import os
@@ -17,7 +20,7 @@ class TestClient(unittest.TestCase):
         self.pw = '12345'
         self.kd = keyderivation.KeyDerivation(self.username)
         self.ste = ste.global_test_configer(self.kd)
-        self.client = Client(username=self.username, password=self.pw)
+        self.client = Client(username=self.username, password=self.pw, server_location='127.0.0.1:443')
 
     def tearDown(self):
         self.ste.recover_resources()
@@ -33,7 +36,7 @@ class TestClient(unittest.TestCase):
         random_file_path = self.create_random_file().relative_to(globals.WORK_DIR)
         sleep(self.sleep_time)
         file_list_enc = self.client.servercoms.get_file_list()
-        file_list_dec = self.client.file_crypt.decrypt_file_list(file_list_enc)
+        file_list_dec = list(np.array(self.client.file_crypt.decrypt_file_list(file_list_enc))[:, 0])
         self.assertIn(random_file_path, file_list_dec)
 
     def test_delete_file(self):
@@ -57,7 +60,7 @@ class TestClient(unittest.TestCase):
         random_file_name = pl.Path(random_file_path.name)
         sleep(self.sleep_time)
         file_list_enc = self.client.servercoms.get_file_list()
-        file_list_dec = self.client.file_crypt.decrypt_file_list(file_list_enc)
+        file_list_dec = list(np.array(self.client.file_crypt.decrypt_file_list(file_list_enc))[:, 0])
         self.assertIn(random_file_relative_path, file_list_dec)
         # Delete the file locally, "close client" such that the server is not asked to also delete (archive)
         self.client.close_client()

@@ -97,3 +97,23 @@ class TestKeyDerivation(unittest.TestCase):
         self.assertTrue(len(keys) == 2)
         self.assertTrue(keys[0] == key2, "The first key should be the current key.")
         self.assertTrue(keys[1] == key1, "The second key should be the old key.")
+
+    def test_can_recover_key_replaced_thrice(self):
+        pw_1 = '12345'
+        pw_2 = 'abcde'
+        pw_3 = '123abc'
+        pw_4 = '456def'
+        self.kd.select_first_pw(pw_1)
+        key1 = self.kd.derive_key(pw_1)
+        self.kd.replace_pw(pw_1, pw_2)
+        key2 = self.kd.derive_key(pw_2)
+        self.kd.replace_pw(pw_2, pw_3)
+        key3 = self.kd.derive_key(pw_3)
+        self.kd.replace_pw(pw_3, pw_4)
+        key4 = self.kd.derive_key(pw_4)
+        keys = self.kd.retrieve_keys(key4)
+        self.assertTrue(len(keys) == 4)
+        self.assertTrue(keys[0] == key4, "The first key should be the current key.")
+        self.assertTrue(keys[1] == key3, "The second key should be the old key.")
+        self.assertTrue(keys[2] == key2, "The second key should be the old key.")
+        self.assertTrue(keys[3] == key1, "The second key should be the old key.")

@@ -46,7 +46,7 @@ class FileCryptography:
     def decrypt_relative_file_path(self, enc_file_name: pl.Path, nonce):
         enc_file_name = bytes.fromhex(str(enc_file_name.stem))
         return self.aesgcm.decrypt(
-            self.salt, enc_file_name, associated_data=None)
+            bytes(nonce, 'utf-8'), enc_file_name, associated_data=None)
 
     def decrypt_file(self, file_path, additional_data):
         """Decrypt file_name and return name of the decrypted file"""
@@ -71,12 +71,12 @@ class FileCryptography:
         globals.DOWNLOADED_FILE_QUEUE.append(dec_file_name)
         return dec_file_path
 
-    def decrypt_file_list(self, enc_file_name_list: list) -> list:
+    def decrypt_file_list(self, enc_relative_path_list: list) -> list:
         """Get a list of encrypted file names, decrypt them, make them to paths and return an unencrypted list"""
         dec_file_name_list = []
-        for file in enc_file_name_list:
-            dec_file_name = self.decrypt_relative_file_path(pl.Path(file))
-            dec_file_name_list.append(pl.Path(str(dec_file_name, 'utf-8')))
+        for enc_relative_path, nonce in enc_relative_path_list:
+            dec_file_name = self.decrypt_relative_file_path(pl.Path(enc_relative_path), nonce)
+            dec_file_name_list.append([pl.Path(str(dec_file_name, 'utf-8')), nonce])
         return dec_file_name_list
 
     def encrypt_key(self, key, nonce):
