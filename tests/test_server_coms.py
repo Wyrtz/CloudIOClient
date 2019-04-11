@@ -1,11 +1,10 @@
+import pathlib as pl
 import unittest
 
 from ServerComs import ServComs
-from security import keyderivation
-from security.filecryptography import FileCryptography
 from resources import globals
-import pathlib as pl
-
+from security import keyderivation
+from tests import setup_test_environment as ste
 
 class TestServercoms(unittest.TestCase):
 
@@ -15,7 +14,9 @@ class TestServercoms(unittest.TestCase):
         self.file_name = "pic1.jpg"
         self.file_path = pl.PurePath.joinpath(pl.Path(globals.TEST_FILE_FOLDER), self.file_name)
         self.relative_file_path = self.file_path.relative_to(globals.WORK_DIR)
-        self.enc = FileCryptography(keyderivation.KeyDerivation("abc").derive_key("123"))
+        self.kd = keyderivation.KeyDerivation("a3sdfg7h8")
+        self.ste = ste.global_test_configer(self.kd)
+        self.enc = self.kd.select_first_pw("1278")
         self.nonce1 = globals.get_nonce()
         self.nonce2 = globals.get_nonce()
 
@@ -28,7 +29,7 @@ class TestServercoms(unittest.TestCase):
         enc_file_name = enc_file_path.name
         # Get list back from server, and see if it is there
         file_list = self.serverComs.get_file_list()
-        self.assertIn(enc_file_name, file_list, "File not on the server!")
+        self.assertIn([enc_file_name, self.nonce1], file_list, "File not on the server!")
 
     def test_receive_send_file(self):
         with open(self.file_path, 'rb') as file:
@@ -50,5 +51,6 @@ class TestServercoms(unittest.TestCase):
         return enc_file_path, additional_data
 
     def tearDown(self):
+        self.ste.recover_resources()
         self.serverComs.register_deletion_of_file(self.enc.encrypt_relative_file_path(self.relative_file_path, self.nonce1))
         globals.clear_tmp()

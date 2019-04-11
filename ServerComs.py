@@ -66,7 +66,7 @@ class ServComs():
 
     def register_deletion_of_file(self, enc_file_name):
         """Signals to server that the file known by its encrypted alias should not be considered 'live' anymore."""
-        response = requests.post('https://' + self.serverLocation + '/archive_file/' + enc_file_name, verify=self.verify)
+        response = requests.post('https://' + self.serverLocation + '/archive_file/' + str(enc_file_name), verify=self.verify)
         if response.status_code != 404:
             response.raise_for_status()
         else:

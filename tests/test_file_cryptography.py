@@ -5,42 +5,22 @@ import unittest
 
 from security import keyderivation
 from security.filecryptography import FileCryptography
+import tests.setup_test_environment as ste
 from resources import globals
 from tests import test_keyderivation
 
 
 class test_file_cryptography(unittest.TestCase):
+
     def setUp(self):
         self.file_name = "client.txt"
         self.file_path = pl.PurePath.joinpath(globals.TEST_FILE_FOLDER, self.file_name)
         self.kd = keyderivation.KeyDerivation('12345')
-        try:
-            self.key_hashes_to_save = self.kd.get_hashes_of_keys()
-            pl.Path(globals.KEY_HASHES).unlink()
-        except FileNotFoundError:  # File might not exist.
-            pass
-        try:
-            self.enc_old_keys = self.kd.get_enc_old_keys()
-            pl.Path(globals.ENC_OLD_KEYS).unlink()
-        except FileNotFoundError:  # File might not exist.
-            pass
-        self.file_crypt = self.kd.select_first_pw("asd")
+        self.ste = ste.global_test_configer(self.kd)
+        self.file_crypt = self.kd.select_first_pw("abe")
 
     def tearDown(self):
-        try:
-            self.recover_key_hashes(self.key_hashes_to_save)
-        except AttributeError:  # If file not found attribute doesn't exist.
-            try:
-                pl.Path(globals.KEY_HASHES).unlink()
-            except FileNotFoundError:
-                pass  # Shouldn't exist and doesn't already
-        try:
-            self.recover_enc_old_keys(self.enc_old_keys)
-        except AttributeError:  # If file not found attribute doesn't exist.
-            try:
-                pl.Path(globals.ENC_OLD_KEYS).unlink()
-            except FileNotFoundError:
-                pass  # Shouldn't exist and doesn't already
+        self.ste.recover_resources()
         globals.clear_tmp()
 
     def test_encrypt_decrypt(self):

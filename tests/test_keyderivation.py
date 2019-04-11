@@ -1,8 +1,7 @@
 import time
 import unittest
-import pathlib as pl
-from security import keyderivation, filecryptography
-from resources import globals
+
+from security import keyderivation
 from security.keyderivation import BadKeyException, IllegalMethodUsageException
 from tests import setup_test_environment as ste
 

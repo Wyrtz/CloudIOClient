@@ -5,6 +5,7 @@ import platform
 import secrets
 import time
 
+from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 from resources import globals
@@ -75,7 +76,10 @@ class FileCryptography:
     def decrypt_file_list_extended(self, enc_relative_path_list_with_nonces: list) -> list:
         file_name_nonce_enc_file_name_triple_list = []
         for enc_relative_path, nonce in enc_relative_path_list_with_nonces:
-            dec_file_name = self.decrypt_relative_file_path(pl.Path(enc_relative_path), nonce)
+            try:
+                dec_file_name = self.decrypt_relative_file_path(pl.Path(enc_relative_path), nonce)
+            except InvalidTag:  # File on server encrypted under another key.
+                continue
             file_name_nonce_enc_file_name_triple_list.append([pl.Path(str(dec_file_name, 'utf-8')), nonce, enc_relative_path])
         return file_name_nonce_enc_file_name_triple_list
 

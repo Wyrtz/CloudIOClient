@@ -40,8 +40,10 @@ class Client:
 
     def send_file(self, file_path):  # TODO: If existing file modified nonce1 should be constant.
         try:
+            file_name_nonce = globals.get_nonce()
+            file_data_nonce = globals.get_nonce()
             enc_file_path, additional_data = self.file_crypt.encrypt_file(
-                file_path, globals.get_nonce(), globals.get_nonce()
+                file_path, file_name_nonce, file_data_nonce
             )
             success = self.servercoms.send_file(enc_file_path, additional_data)
         except PermissionError:
@@ -50,8 +52,11 @@ class Client:
             self.send_file(file_path)
             return
         pl.Path.unlink(enc_file_path)  # Delete file
+        relative_path = file_path.relative_to(globals.WORK_DIR)
+        relative_enc_path = enc_file_path.relative_to(globals.TEMPORARY_FOLDER)
         if success:  # TODO: Check if redundant; see servercoms
             print("File", file_path.stem, "send successfully!")
+            globals.SERVER_FILE_LIST.append([relative_path, file_name_nonce, relative_enc_path])
 
     def get_file(self, file_name):
         """Encrypt the name, send a request and get back either '404' or a file candidate.
@@ -59,6 +64,7 @@ class Client:
         globals.DOWNLOADED_FILE_QUEUE.append(file_name)
         enc_file_name_list = [lst[2] for lst in globals.SERVER_FILE_LIST if lst[0] == file_name]
         if len(enc_file_name_list) != 1:
+            print("Zero, two or more files on server derived from the same name.\n", enc_file_name_list)
             raise NotImplemented
         try:
             tmp_enc_file_path, additional_data = self.servercoms.get_file(str(enc_file_name_list[0]))
