@@ -19,7 +19,6 @@ class TestClient(unittest.TestCase):
         self.ste = ste.global_test_configer(self.kd)
         self.enc = self.kd.select_first_pw(self.pw)
         self.client = Client(username=self.username, password=self.pw)
-        self.client.start_observing()
 
     def tearDown(self):
         self.ste.recover_resources()

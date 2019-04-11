@@ -36,8 +36,5 @@ class MyHandler(FileSystemEventHandler):
         print("File deleted: " + str(relative_path))
         server_file_list = globals.SERVER_FILE_LIST
         enc_name_list = [lst[2] for lst in server_file_list if lst[0] == relative_path]
-        print(relative_path, type(relative_path))
-        print(enc_name_list)
-        print(server_file_list)
         for enc_name in enc_name_list:
             self.servercoms.register_deletion_of_file(enc_name)

@@ -64,8 +64,7 @@ class Client:
         globals.DOWNLOADED_FILE_QUEUE.append(file_name)
         enc_file_name_list = [lst[2] for lst in globals.SERVER_FILE_LIST if lst[0] == file_name]
         if len(enc_file_name_list) != 1:
-            print("Zero, two or more files on server derived from the same name.\n", enc_file_name_list)
-            raise NotImplemented
+            raise NotImplementedError("Zero, two or more files on server derived from the same name", enc_file_name_list)
         try:
             tmp_enc_file_path, additional_data = self.servercoms.get_file(str(enc_file_name_list[0]))
         except FileNotFoundError:
