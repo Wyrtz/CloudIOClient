@@ -29,7 +29,7 @@ class ServComs():
                                             'additional_data': bytes(json.dumps(additional_data), 'utf-8')},
                                      verify=self.verify)
             response.raise_for_status()
-            return True
+            return True  # TODO: Check if redundant? see send file in client
 
     def get_file(self, enc_file_name):
         """Retrive enc_file_name from server and place it in tmp (ready for decryption)"""
@@ -58,8 +58,8 @@ class ServComs():
             raise FileNotFoundError  # TODO: Replace this error?
         if 'file_list' not in response_dict.keys():
             raise FileNotFoundError  # TODO: Replace this error?
-        enc_file_list = response_dict['file_list']
-        return response_dict['file_list']
+        enc_file_list_with_nonces = response_dict['file_list']
+        return enc_file_list_with_nonces
 
     # Todo: rename file: Send delete file request (and send the renamed file)
     # Todo: delete file

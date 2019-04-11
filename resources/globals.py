@@ -35,6 +35,7 @@ SERVER_LOCATION = 'wyrnas.myqnapcloud.com:8000'
 KEY_HASHES = pl.Path.joinpath(RESOURCE_DIR, 'key_hashes.txt')
 KEY_SALTS = pl.Path.joinpath(RESOURCE_DIR, 'key_salts.txt')  # TODO: Perhaps instead of static make random & record all salts.
 ENC_OLD_KEYS = pl.Path.joinpath(RESOURCE_DIR, 'enc_keys.txt')  # Should contain old key encryptions
+SERVER_FILE_LIST = None
 
 
 def clear_tmp():
@@ -47,7 +48,7 @@ def clear_tmp():
             clear_tmp()
 
 
-def get_list_difference(list_1: list,list_2: list) -> list:
+def get_list_difference(list_1: list, list_2: list) -> list:  # TODO: What if name duplication? What?
     return [x for x in list_1 if x not in list_2]
 
 

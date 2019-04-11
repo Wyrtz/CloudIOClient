@@ -1,11 +1,12 @@
 import json
 import os
-import platform
-import time
 import pathlib as pl
+import platform
+import secrets
+import time
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-import secrets
+
 from resources import globals
 
 
@@ -71,13 +72,16 @@ class FileCryptography:
         globals.DOWNLOADED_FILE_QUEUE.append(dec_file_name)
         return dec_file_path
 
-    def decrypt_file_list(self, enc_relative_path_list: list) -> list:
-        """Get a list of encrypted file names, decrypt them, make them to paths and return an unencrypted list"""
-        dec_file_name_list = []
-        for enc_relative_path, nonce in enc_relative_path_list:
+    def decrypt_file_list_extended(self, enc_relative_path_list_with_nonces: list) -> list:
+        file_name_nonce_enc_file_name_triple_list = []
+        for enc_relative_path, nonce in enc_relative_path_list_with_nonces:
             dec_file_name = self.decrypt_relative_file_path(pl.Path(enc_relative_path), nonce)
-            dec_file_name_list.append([pl.Path(str(dec_file_name, 'utf-8')), nonce])
-        return dec_file_name_list
+            file_name_nonce_enc_file_name_triple_list.append([pl.Path(str(dec_file_name, 'utf-8')), nonce, enc_relative_path])
+        return file_name_nonce_enc_file_name_triple_list
+
+    def decrypt_file_list(self, enc_relative_path_list_with_nonces: list) -> list:
+        """Get a list of encrypted file names, decrypt them, make them to paths and return an unencrypted list"""
+        return [lst[0] for lst in self.decrypt_file_list_extended(enc_relative_path_list_with_nonces)]
 
     def encrypt_key(self, key, nonce):
         return self.aesgcm.encrypt(bytes.fromhex(nonce), bytes.fromhex(key), associated_data=None).hex()

@@ -115,7 +115,7 @@ class CLI:
         if command == 'df':
             print("Deleting file...")
             print(requested_file)
-            self.client.delete_file(requested_file)
+            self.client.delete_remote_file(requested_file)
 
 
     def print_list(self, list_to_print):

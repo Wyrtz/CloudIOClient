@@ -20,7 +20,8 @@ class Client:
         if self.kd.has_password():
             self.file_crypt = FileCryptography(self.kd.derive_key(password))
         else:
-            self.file_crypt = self.kd.select_first_pw(password)
+            self.file_crypt = self.kd.select_first_pw(password)  # TODO: Has user been made aware he/she is selecting new pw?
+        globals.SERVER_FILE_LIST = self.file_crypt.decrypt_file_list_extended(self.servercoms.get_file_list())
         self.handler_thread = Thread(target=MyHandler, args=(self.servercoms, self.file_crypt, self))
         self.handler_thread.start()
         # Start initial folder observer
@@ -37,7 +38,7 @@ class Client:
         self.observers_list.append(new_observer)
         new_observer.start()
 
-    def send_file(self, file_path):
+    def send_file(self, file_path):  # TODO: If existing file modified nonce1 should be constant.
         try:
             enc_file_path, additional_data = self.file_crypt.encrypt_file(
                 file_path, globals.get_nonce(), globals.get_nonce()
@@ -49,33 +50,34 @@ class Client:
             self.send_file(file_path)
             return
         pl.Path.unlink(enc_file_path)  # Delete file
-        if success:
+        if success:  # TODO: Check if redundant; see servercoms
             print("File", file_path.stem, "send successfully!")
-        # ToDo: handle fail ?
 
     def get_file(self, file_name):
         """Encrypt the name, send a request and get back either '404' or a file candidate.
            If the candidate is valid and newer, keep it."""
         globals.DOWNLOADED_FILE_QUEUE.append(file_name)
-        # TODO: implement get_nonce_of_filename(name)
-        enc_file_name = self.file_crypt.encrypt_relative_file_path(file_name, nonce)
+        enc_file_name_list = [lst[2] for lst in globals.SERVER_FILE_LIST if lst[0] == file_name]
+        if len(enc_file_name_list) != 1:
+            raise NotImplemented
         try:
-            tmp_enc_file_path, additional_data = self.servercoms.get_file(str(enc_file_name))
+            tmp_enc_file_path, additional_data = self.servercoms.get_file(str(enc_file_name_list[0]))
         except FileNotFoundError:
             print("File not found on server.")
             return
-        self.file_crypt.decrypt_file(tmp_enc_file_path,  # TODO: If doesn't validate, does it overwrite?
-                                     additional_data=additional_data)
+        self.file_crypt.decrypt_file(tmp_enc_file_path, additional_data=additional_data)
         pl.Path.unlink(tmp_enc_file_path)
 
-    def delete_file(self, file_name: pl.Path):
-        enc_path = self.file_crypt.encrypt_relative_file_path(file_name)
-        self.servercoms.register_deletion_of_file(enc_path)
+    def delete_remote_file(self, file_name: pl.Path):
+        server_file_list = globals.SERVER_FILE_LIST
+        enc_path_lst = [lst[2] for lst in server_file_list if lst[0] == file_name]
+        if len(enc_path_lst) != 1:
+            raise NotImplemented
+        self.servercoms.register_deletion_of_file(enc_path_lst[0])
 
     def get_local_file_list(self):
         """Return a list where each element is the string name of this file"""
         # ToDo: recursive (folders)
-        # ToDO: PathLib? No os.listdir function
         file_list = os.listdir(self.file_folder)
         file_list = [pl.Path(x) for x in file_list]
         file_list = [pl.Path.joinpath(globals.FILE_FOLDER, x) for x in file_list]
@@ -84,11 +86,11 @@ class Client:
 
     def sync_files(self):  # TODO: Refactor this.
         local_file_list = self.get_local_file_list()
-        enc_remote_file_list = self.servercoms.get_file_list()
-        dec_remote_file_list = self.file_crypt.decrypt_file_list(enc_remote_file_list)
-        pathlib_remote_file_list = [pl.Path(x) for x in dec_remote_file_list]
-        files_not_on_server = globals.get_list_difference(local_file_list, pathlib_remote_file_list)
-        files_not_on_client = globals.get_list_difference(pathlib_remote_file_list, local_file_list)
+        enc_remote_file_list_with_nonces = self.servercoms.get_file_list()
+        globals.SERVER_FILE_LIST = self.file_crypt.decrypt_file_list_extended(enc_remote_file_list_with_nonces)
+        remote_file_list = [lst[0] for lst in globals.SERVER_FILE_LIST]
+        files_not_on_server = globals.get_list_difference(local_file_list, remote_file_list)
+        files_not_on_client = globals.get_list_difference(remote_file_list, local_file_list)
         for file in files_not_on_server:
             abs_path = pl.Path.joinpath(globals.WORK_DIR, file)
             self.send_file(abs_path)
