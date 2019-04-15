@@ -36,7 +36,7 @@ class CLI:
             except BadKeyException:
                 self.clear_screen()
                 print(f"{Fore.RED}Wrong username or password{Style.RESET_ALL}")
-                input()
+                sleep(2)
                 self.start_user_interface()
             self.clear_screen(False)
             welcome = "Welcome   " + username + " !"
@@ -77,9 +77,7 @@ class CLI:
                     self.get_or_delete_avaliable = True
                     self.print_diff_to_server()
                 if command == 'exit' or command == 'e':
-                    self.client.close_client()
-                    self.clear_screen(print_logo=False)
-                    break
+                    raise KeyboardInterrupt
                 else:
                     print()
                     print("*"*40)
@@ -120,7 +118,7 @@ class CLI:
 
     def print_list(self, list_to_print):
         list_to_print_str = [str(x) for x in list_to_print]
-        longest_element_length = len(max(list_to_print_str, key=len))
+        # longest_element_length = len(max(list_to_print_str, key=len))
         spaceing = lambda fewer_spacees: " " * (6-fewer_spacees)
         print(f"{Fore.GREEN}\t #{spaceing(1)}File Name{Style.RESET_ALL}")
         for numb, element in enumerate(list_to_print):
