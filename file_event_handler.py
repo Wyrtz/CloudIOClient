@@ -1,4 +1,3 @@
-import numpy as np
 from watchdog.events import FileSystemEventHandler
 
 from ServerComs import ServComs
