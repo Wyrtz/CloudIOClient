@@ -10,10 +10,10 @@ import pathlib as pl
 
 class KeyDerivation:
 
-    def __init__(self, salt):
-        if type(salt) is str:
-            salt = bytes(salt, 'utf-8')
-        self.salt = salt
+    def __init__(self, username: str):
+        if len(username) < 5:
+            raise BadUsernameSelected
+        self.salt = bytes(username, 'utf-8')
         self.kdf = self.new_scrypt
         self.enc_keys_file_lock = Lock()
         self.key_hashes_lock = Lock()
@@ -65,6 +65,8 @@ class KeyDerivation:
     def replace_pw(self, old_pw, new_pw):  # It's called future security!
         if not self.has_password():
             raise IllegalMethodUsageException()
+        if len(new_pw) < 12:
+            raise BadPasswordSelected
         old_key = self.derive_key(old_pw)
         new_key = self.derive_key(new_pw, False)
         file_crypt = filecryptography.FileCryptography(new_key)
@@ -75,6 +77,8 @@ class KeyDerivation:
         return file_crypt
 
     def select_first_pw(self, pw):
+        if len(pw) < 12:
+            raise BadPasswordSelected
         if self.has_password():
             raise IllegalMethodUsageException()
         key = self.derive_new_key(pw)
@@ -118,7 +122,7 @@ class KeyDerivation:
             if not hash_of_key == key_hashes_stored[idx + 1]:  # We then verify the hash is correct.
                 raise BadKeyException  # If not, bad key we decrypted. Assuming hash is correct only pw can be at fault.
             keys.append(successor_key)  # If is good hash, store it and continue to the next.
-        return keys  # TODO: refactor to return filecryptos.
+        return keys
 
     def get_enc_old_keys(self):
         self.enc_keys_file_lock.acquire()
@@ -157,4 +161,12 @@ class BadKeyException(Exception):
 
 
 class IllegalMethodUsageException(Exception):
+    pass
+
+
+class BadPasswordSelected(Exception):
+    pass
+
+
+class BadUsernameSelected(Exception):
     pass

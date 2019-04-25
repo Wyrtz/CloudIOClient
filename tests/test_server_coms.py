@@ -16,7 +16,7 @@ class TestServercoms(unittest.TestCase):
         self.relative_file_path = self.file_path.relative_to(globals.WORK_DIR)
         self.kd = keyderivation.KeyDerivation("a3sdfg7h8")
         self.ste = ste.global_test_configer(self.kd)
-        self.enc = self.kd.select_first_pw("1278")
+        self.enc = self.kd.select_first_pw("127834634643")
         self.nonce1 = globals.get_nonce()
         self.nonce2 = globals.get_nonce()
 

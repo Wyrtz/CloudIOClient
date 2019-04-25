@@ -17,7 +17,7 @@ class test_file_cryptography(unittest.TestCase):
         self.file_path = pl.PurePath.joinpath(globals.TEST_FILE_FOLDER, self.file_name)
         self.kd = keyderivation.KeyDerivation('12345')
         self.ste = ste.global_test_configer(self.kd)
-        self.file_crypt = self.kd.select_first_pw("abe")
+        self.file_crypt = self.kd.select_first_pw("abecattemadet")
 
     def tearDown(self):
         self.ste.recover_resources()

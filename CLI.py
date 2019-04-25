@@ -1,5 +1,6 @@
 import os
 import platform
+from getpass import getpass
 from time import sleep
 
 from pyfiglet import Figlet
@@ -12,7 +13,7 @@ import pathlib as pl
 
 from client import Client
 from security import keyderivation
-from security.keyderivation import BadKeyException
+from security.keyderivation import BadKeyException, BadPasswordSelected
 
 
 class CLI:
@@ -26,13 +27,43 @@ class CLI:
         figlet = Figlet()
         try:
             self.clear_screen()
-            username = input("Username:")
-            password = input("Password:")
+            is_testing = None
+            while is_testing is None:
+                bool_input = input("Are we testing locally? (y/n):")
+                if bool_input == "y":
+                    is_testing = True
+                elif bool_input == "n":
+                    is_testing = False
+                else:
+                    self.clear_screen()
+                    input("Could not interpret input. Let's try again:")
+            if is_testing:
+                server_location = "127.0.0.1:443"
+            else:
+                server_location = globals.SERVER_LOCATION
+            if pl.Path(globals.KEY_HASHES).exists():
+                username = input("Username:")
+                password = getpass("Password:")
+            while not pl.Path(globals.KEY_HASHES).exists():
+                username = input("Select new username:")
+                password = getpass("Select new password (length > 12):")
+                password_ = getpass("Confirm new password (length > 12):")
+                if password != password_:
+                    self.clear_screen()
+                    input("Password didn't match. Press enter to try again.")
+                    continue
+                else:
+                    try:
+                        keyderivation.KeyDerivation(username).select_first_pw(password)
+                    except BadPasswordSelected:
+                        self.clear_screen()
+                        input("Password not acceptable. Press enter to try again.")
+                        continue
             if not pl.Path(globals.KEY_HASHES).exists():
-                keyderivation.KeyDerivation(username).select_first_pw(password)  # TODO: Username?
+                keyderivation.KeyDerivation(username).select_first_pw(password)
             self.clear_screen()
             try:
-                self.client = Client(username, password)
+                self.client = Client(username, password, server_location=server_location)
             except BadKeyException:
                 self.clear_screen()
                 print(f"{Fore.RED}Wrong username or password{Style.RESET_ALL}")
@@ -78,6 +109,22 @@ class CLI:
                     self.print_diff_to_server()
                 if command == 'exit' or command == 'e':
                     raise KeyboardInterrupt
+                if command == 'replace_password' or command == "re_pw":
+                    self.clear_screen()
+                    print("Initiated password replacement.")
+                    old_pw = getpass("Type old password:")
+                    new_password = getpass("Type new password:")
+                    new_password_ = getpass("Repeat new password:")
+                    if new_password != new_password_:
+                        self.clear_screen()
+                        print("New password doens't match.")
+                    try:
+                        self.client.kd.replace_pw(old_pw=old_pw, new_pw=new_password)
+                        input("Replaced password successfully. Press enter to continue.")
+                        self.clear_screen()
+                    except (BadKeyException, BadPasswordSelected):
+                        input("Failed to replace password. Press enter to continue.")
+                        self.clear_screen()
                 else:
                     print()
                     print("*"*40)
@@ -115,7 +162,6 @@ class CLI:
             print(requested_file)
             self.client.delete_remote_file(requested_file)
 
-
     def print_list(self, list_to_print):
         list_to_print_str = [str(x) for x in list_to_print]
         # longest_element_length = len(max(list_to_print_str, key=len))
@@ -126,7 +172,6 @@ class CLI:
             print("\t", numb+1, end=spaceing(len_numb))
             print(element)
 
-
     def print_remote_files(self):
         enc_remote_file_list = self.client.servercoms.get_file_list()
         if len(enc_remote_file_list) == 0:
@@ -134,7 +179,6 @@ class CLI:
         else:
             self.dec_remote_file_list = self.client.file_crypt.decrypt_file_list(enc_remote_file_list)
             self.print_list(self.dec_remote_file_list)
-
 
     def print_local_files(self):
         self.local_file_list = self.client.get_local_file_list()
@@ -182,6 +226,7 @@ Available commands:
     Local_files         (ls, lf, local_files)
     Remote_files        (rf, remote_files)
     Diff_local/remote   (diff, d)
+    Replace password    (replace pw, replace password)
     Exit                (e, exit)
                         """
         additional = """

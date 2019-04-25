@@ -8,7 +8,9 @@ from security.filecryptography import FileCryptography
 from file_event_handler import MyHandler
 from watchdog.observers import Observer
 from resources import globals
-
+# TODO: Should be able to use old encrypted keys.
+# TODO: Modified files.
+# TODO: Can recover files under old password.
 
 class Client:
 
@@ -16,11 +18,11 @@ class Client:
         self.server_location = server_location
         self.file_folder = file_folder
         self.servercoms = ServComs(server_location)
-        self.kd = keyderivation.KeyDerivation(username)  # TODO: Username?
+        self.kd = keyderivation.KeyDerivation(username)
         if self.kd.has_password():
             self.file_crypt = FileCryptography(self.kd.derive_key(password))
         else:
-            self.file_crypt = self.kd.select_first_pw(password)  # TODO: Has user been made aware he/she is selecting new pw?
+            raise AssertionError  # Handled by CLI now.
         globals.SERVER_FILE_LIST = self.file_crypt.decrypt_file_list_extended(self.servercoms.get_file_list())
         self.handler_thread = Thread(target=MyHandler, args=(self.servercoms, self.file_crypt, self))
         self.handler_thread.start()
@@ -38,7 +40,7 @@ class Client:
         self.observers_list.append(new_observer)
         new_observer.start()
 
-    def send_file(self, file_path):  # TODO: If existing file modified nonce1 should be constant.
+    def send_file(self, file_path):  # TODO: Not handling file modification when name nonce should be constant.
         try:
             file_name_nonce = globals.get_nonce()
             file_data_nonce = globals.get_nonce()
@@ -89,7 +91,7 @@ class Client:
         file_list = [x.relative_to(globals.WORK_DIR) for x in file_list]
         return file_list
 
-    def sync_files(self):  # TODO: Refactor this.
+    def sync_files(self):
         local_file_list = self.get_local_file_list()
         enc_remote_file_list_with_nonces = self.servercoms.get_file_list()
         globals.SERVER_FILE_LIST = self.file_crypt.decrypt_file_list_extended(enc_remote_file_list_with_nonces)

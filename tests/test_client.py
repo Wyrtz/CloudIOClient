@@ -13,8 +13,8 @@ class TestClient(unittest.TestCase):
     def setUp(self):
         self.sleep_time = 1
         self.random_files_list = []
-        self.username = "abe"
-        self.pw = '12345'
+        self.username = "abecattemattemad"
+        self.pw = '1234567890101112'
         self.kd = keyderivation.KeyDerivation(self.username)
         self.ste = ste.global_test_configer(self.kd)
         self.enc = self.kd.select_first_pw(self.pw)
