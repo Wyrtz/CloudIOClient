@@ -12,6 +12,7 @@ from resources import globals
 # TODO: Modified files.
 # TODO: Can recover files under old password.
 
+
 class Client:
 
     def __init__(self, username, password, server_location=globals.SERVER_LOCATION, file_folder=globals.FILE_FOLDER):

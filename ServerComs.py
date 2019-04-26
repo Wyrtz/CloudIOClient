@@ -20,20 +20,20 @@ class ServComs():
         self.cert = "wyrnasmyqnapcloudcom.crt"
         self.verify = False  #self.cert
 
-    def send_file(self, file_path, additional_data):
+    def send_file(self, file_path, additional_data, userID):
         """Send provided filename to the server"""
         # ToDo: send as stream for big files (otherwise memory error). Tested up to 300mb works
         with open(file_path, 'rb') as file:
-            response = requests.post('https://' + self.serverLocation + '/upload_file',
+            response = requests.post('https://' + self.serverLocation + '/upload_file/' + userID,
                                      files={'file_content': file,
                                             'additional_data': bytes(json.dumps(additional_data), 'utf-8')},
                                      verify=self.verify)
             response.raise_for_status()
             return True  # TODO: Check if redundant? see send file in client
 
-    def get_file(self, enc_file_name):
+    def get_file(self, enc_file_name, userID):
         """Retrive enc_file_name from server and place it in tmp (ready for decryption)"""
-        response = requests.get('https://' + self.serverLocation + '/get_file/' + enc_file_name, verify=self.verify)
+        response = requests.get('https://' + self.serverLocation + '/get_file/' + enc_file_name + '/' + userID, verify=self.verify)
         if response.status_code == 404:
             raise FileNotFoundError
         try:
@@ -48,9 +48,9 @@ class ServComs():
             saveFile.write(bytes.fromhex(response_dict['file']))
         return tmp_file_location, response_dict['additional_data']
 
-    def get_file_list(self):
+    def get_file_list(self, userID: str):
         """Get a list of what files the server has"""
-        response = requests.get('https://' + self.serverLocation + '/list_files', verify=self.verify)
+        response = requests.get('https://' + self.serverLocation + '/list_files/' + userID, verify=self.verify)
         response.raise_for_status()
         try:
             response_dict = json.loads(response.content)
@@ -64,9 +64,12 @@ class ServComs():
     # Todo: rename file: Send delete file request (and send the renamed file)
     # Todo: delete file
 
-    def register_deletion_of_file(self, enc_file_name):
+    def register_deletion_of_file(self, enc_file_name, userID):
         """Signals to server that the file known by its encrypted alias should not be considered 'live' anymore."""
-        response = requests.post('https://' + self.serverLocation + '/archive_file/' + str(enc_file_name), verify=self.verify)
+        response = requests.post(
+            'https://' + self.serverLocation + '/archive_file/' + str(enc_file_name) + '/' + userID,
+            verify=self.verify
+        )
         if response.status_code != 404:
             response.raise_for_status()
         else:
