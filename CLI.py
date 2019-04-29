@@ -173,7 +173,7 @@ class CLI:
             print(element)
 
     def print_remote_files(self):
-        enc_remote_file_list = self.client.servercoms.get_file_list()
+        enc_remote_file_list = self.client.servercoms.get_file_list(self.client.userID)
         if len(enc_remote_file_list) == 0:
             print("\t(no files on server)")
         else:
@@ -189,7 +189,7 @@ class CLI:
 
     def print_diff_to_server(self):
         local_file_list = self.client.get_local_file_list()
-        enc_remote_file_list = self.client.servercoms.get_file_list()
+        enc_remote_file_list = self.client.servercoms.get_file_list(self.client.userID)
         self.dec_remote_file_list = self.client.file_crypt.decrypt_file_list(enc_remote_file_list)
         pathlib_remote_file_list = [pl.Path(x) for x in self.dec_remote_file_list]
         files_not_on_server = globals.get_list_difference(local_file_list, pathlib_remote_file_list)
