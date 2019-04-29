@@ -31,7 +31,7 @@ FILE_FOLDER = pl.Path.joinpath(WORK_DIR, "files")
 TEMPORARY_FOLDER = pl.Path.joinpath(WORK_DIR, "tmp")
 create_folders()
 DOWNLOADED_FILE_QUEUE = []
-SERVER_LOCATION = 'wyrnas.myqnapcloud.com:8000'
+SERVER_LOCATION = 'wyrnas.myqnapcloud.com:8001'
 KEY_HASHES = pl.Path.joinpath(RESOURCE_DIR, 'key_hashes.txt')
 KEY_SALTS = pl.Path.joinpath(RESOURCE_DIR, 'key_salts.txt')  # TODO: Perhaps instead of static make random & record all salts.
 ENC_OLD_KEYS = pl.Path.joinpath(RESOURCE_DIR, 'enc_keys.txt')  # Should contain old key encryptions

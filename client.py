@@ -28,7 +28,6 @@ class Client:
     def __init__(self, username, password, server_location=globals.SERVER_LOCATION, file_folder=globals.FILE_FOLDER):
         self.server_location = server_location
         self.file_folder = file_folder
-        self.servercoms = ServComs(server_location)
         self.kd = keyderivation.KeyDerivation(username)
         if self.kd.has_password():
             key = self.kd.derive_key(password)
@@ -36,7 +35,8 @@ class Client:
         else:
             raise AssertionError  # Handled by CLI now.
         self.userID = hash_key_to_userID(key)
-        globals.SERVER_FILE_LIST = self.file_crypt.decrypt_file_list_extended(self.servercoms.get_file_list(self.userID))
+        self.servercoms = ServComs(server_location, self.userID)
+        globals.SERVER_FILE_LIST = self.file_crypt.decrypt_file_list_extended(self.servercoms.get_file_list())
         self.handler_thread = Thread(target=MyHandler, args=(self.file_crypt, self))
         self.handler_thread.start()
         # Start initial folder observer
@@ -59,7 +59,7 @@ class Client:
             enc_file_path, additional_data = self.file_crypt.encrypt_file(
                 file_path, file_name_nonce, file_data_nonce
             )
-            success = self.servercoms.send_file(enc_file_path, additional_data, self.userID)
+            success = self.servercoms.send_file(enc_file_path, additional_data)
         except PermissionError:
             print("Unable to send file immediately...")
             sleep(1)
@@ -80,7 +80,7 @@ class Client:
         if len(enc_file_name_list) != 1:
             raise NotImplementedError("Zero, two or more files on server derived from the same name", enc_file_name_list)
         try:
-            tmp_enc_file_path, additional_data = self.servercoms.get_file(str(enc_file_name_list[0]), self.userID)
+            tmp_enc_file_path, additional_data = self.servercoms.get_file(str(enc_file_name_list[0]))
         except FileNotFoundError:
             print("File not found on server.")
             return
@@ -92,7 +92,7 @@ class Client:
         enc_path_lst = [lst[2] for lst in server_file_list if lst[0] == file_name]
         if len(enc_path_lst) != 1:
             raise NotImplementedError
-        self.servercoms.register_deletion_of_file(enc_path_lst[0], self.userID)
+        self.servercoms.register_deletion_of_file(enc_path_lst[0])
 
     def get_local_file_list(self):
         """Return a list where each element is the string name of this file"""
