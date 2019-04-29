@@ -11,7 +11,7 @@ import requests
 from resources import globals
 
 
-class ServComs():
+class ServComs():  # TODO: Refactor such that userID is input into the servercoms.
     """Communicates with the file-host server"""
     # ToDO: Do we even have a connection ?
 
@@ -23,18 +23,21 @@ class ServComs():
     def send_file(self, file_path, additional_data, userID):
         """Send provided filename to the server"""
         # ToDo: send as stream for big files (otherwise memory error). Tested up to 300mb works
+        # TODO: Consider adding upload verification (have server return receipts)?
         with open(file_path, 'rb') as file:
             response = requests.post('https://' + self.serverLocation + '/upload_file/' + userID,
                                      files={'file_content': file,
                                             'additional_data': bytes(json.dumps(additional_data), 'utf-8')},
                                      verify=self.verify)
             response.raise_for_status()
-            return True  # TODO: Check if redundant? see send file in client
+            return True
 
     def get_file(self, enc_file_name, userID):
         """Retrive enc_file_name from server and place it in tmp (ready for decryption)"""
         response = requests.get('https://' + self.serverLocation + '/get_file/' + enc_file_name + '/' + userID, verify=self.verify)
-        if response.status_code == 404:
+        if response.status_code != 404:
+            response.raise_for_status()
+        else:
             raise FileNotFoundError
         try:
             # should be dict of {file->file, additional_data->additional_data}
@@ -51,7 +54,6 @@ class ServComs():
     def get_file_list(self, userID: str):
         """Get a list of what files the server has"""
         response = requests.get('https://' + self.serverLocation + '/list_files/' + userID, verify=self.verify)
-        response.raise_for_status()
         try:
             response_dict = json.loads(response.content)
         except JSONDecodeError:
@@ -62,7 +64,6 @@ class ServComs():
         return enc_file_list_with_nonces
 
     # Todo: rename file: Send delete file request (and send the renamed file)
-    # Todo: delete file
 
     def register_deletion_of_file(self, enc_file_name, userID):
         """Signals to server that the file known by its encrypted alias should not be considered 'live' anymore."""
@@ -73,6 +74,4 @@ class ServComs():
         if response.status_code != 404:
             response.raise_for_status()
         else:
-            print("File not on server")
-        print("File archived on server")
-        # TODO: Consider adding upload verification?
+            print("Warning; file not on server attempted to be archived: " + enc_file_name)

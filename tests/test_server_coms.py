@@ -12,10 +12,10 @@ from tests import setup_test_environment as ste
 class TestServercoms(unittest.TestCase):
 
     def register_user(self, userID):
-        requests.post('https://' + self.serverIp + '/register/' + self.userID, verify=False)
+        requests.post('https://' + self.serverIp + '/register/' + userID, verify=False)
 
     def unregister_user(self, userID):
-        requests.post('https://' + self.serverIp + '/unregister/' + self.userID, verify=False)
+        requests.post('https://' + self.serverIp + '/unregister/' + userID, verify=False)
 
     def setUp(self):
         self.serverIp = '127.0.0.1:443' # 'wyrnas.myqnapcloud.com:8000'
@@ -64,3 +64,41 @@ class TestServercoms(unittest.TestCase):
         self.serverComs.register_deletion_of_file(self.enc.encrypt_relative_file_path(self.relative_file_path, self.nonce1), self.userID)
         self.unregister_user(self.userID)
         globals.clear_tmp()
+
+    def test_multiple_users_cannot_access_each_others_files(self):
+        userID1 = 'aaaabbbbccccdddd'  # Create three users
+        userID2 = 'aaaccccbbbddd'
+        userID3 = 'bbbaaadddccccc'
+        self.register_user(userID1)
+        self.register_user(userID2)
+        self.register_user(userID3)
+        try:
+            nonce1_1 = globals.get_nonce()
+            nonce1_2 = globals.get_nonce()
+            nonce2_1 = globals.get_nonce()
+            nonce2_2 = globals.get_nonce()
+            self.send_file(nonce1_1, nonce1_2, userID1)  # have two send a file
+            self.send_file(nonce2_1, nonce2_2, userID2)
+            files_user_1 = self.serverComs.get_file_list(userID1)  # get their files on server back
+            files_user_2 = self.serverComs.get_file_list(userID2)
+            files_user_3 = self.serverComs.get_file_list(userID3)
+            self.assertTrue(len(files_user_3) == 0,  # should have right lengths
+                            "User 3 has send no files; should have no files.")
+            self.assertTrue(len(files_user_1) == 1 and len(files_user_2) == 1,
+                            "User 1 & 2 has send 1 file; should have 1 file.")
+            for encfilename, nonce in files_user_1:  #
+                self.assertTrue([encfilename, nonce] in files_user_1)
+                self.assertTrue([encfilename, nonce] not in files_user_2)
+            for encfilename, nonce in files_user_1:
+                self.assertTrue([encfilename, nonce] in files_user_1)
+                self.assertTrue([encfilename, nonce] not in files_user_2)
+            self.serverComs.get_file(files_user_1[0][0], userID1)
+            self.serverComs.get_file(files_user_2[0][0], userID2)
+            self.assertRaises(FileNotFoundError, self.serverComs.get_file, files_user_1[0][0], userID2)
+            self.assertRaises(FileNotFoundError, self.serverComs.get_file, files_user_2[0][0], userID1)
+        finally:
+            self.unregister_user(userID1)
+            self.unregister_user(userID2)
+            self.unregister_user(userID3)
+
+    # TODO: test_can_retrieve_old_files_under new alias(self):

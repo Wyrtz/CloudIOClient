@@ -1,17 +1,15 @@
-import numpy as np
+import pathlib as pl
+
 from watchdog.events import FileSystemEventHandler
 
-from ServerComs import ServComs
-from security.filecryptography import FileCryptography
-import pathlib as pl
 from resources import globals
+from security.filecryptography import FileCryptography
 
 
 class MyHandler(FileSystemEventHandler):
     """Custom Handling FileSystemEvents"""
 
-    def __init__(self, servercoms: ServComs, file_crypt: FileCryptography, client):
-        self.servercoms = servercoms
+    def __init__(self, file_crypt: FileCryptography, client):
         self.file_crypt = file_crypt
         self.client = client
 
@@ -35,6 +33,4 @@ class MyHandler(FileSystemEventHandler):
         relative_path = abs_path.relative_to(globals.WORK_DIR)
         print("File deleted: " + str(relative_path))
         server_file_list = globals.SERVER_FILE_LIST
-        enc_name_list = [lst[2] for lst in server_file_list if lst[0] == relative_path]
-        for enc_name in enc_name_list:
-            self.servercoms.register_deletion_of_file(enc_name)
+        self.client.delete_remote_file(relative_path)

@@ -2,6 +2,9 @@ import os
 import pathlib as pl
 from threading import Thread
 from time import sleep
+
+from hashlib import sha3_224
+
 from ServerComs import ServComs
 from security import keyderivation
 from security.filecryptography import FileCryptography
@@ -13,6 +16,13 @@ from resources import globals
 # TODO: Can recover files under old password.
 
 
+def hash_key_to_userID(key):
+    hasher = sha3_224()
+    hasher.update(bytes("Keyhash", 'utf-8'))
+    hasher.update(bytes.fromhex(key))
+    return hasher.digest().hex()
+
+
 class Client:
 
     def __init__(self, username, password, server_location=globals.SERVER_LOCATION, file_folder=globals.FILE_FOLDER):
@@ -21,11 +31,13 @@ class Client:
         self.servercoms = ServComs(server_location)
         self.kd = keyderivation.KeyDerivation(username)
         if self.kd.has_password():
-            self.file_crypt = FileCryptography(self.kd.derive_key(password))
+            key = self.kd.derive_key(password)
+            self.file_crypt = FileCryptography(key)
         else:
             raise AssertionError  # Handled by CLI now.
-        globals.SERVER_FILE_LIST = self.file_crypt.decrypt_file_list_extended(self.servercoms.get_file_list())
-        self.handler_thread = Thread(target=MyHandler, args=(self.servercoms, self.file_crypt, self))
+        self.userID = hash_key_to_userID(key)
+        globals.SERVER_FILE_LIST = self.file_crypt.decrypt_file_list_extended(self.servercoms.get_file_list(self.userID))
+        self.handler_thread = Thread(target=MyHandler, args=(self.file_crypt, self))
         self.handler_thread.start()
         # Start initial folder observer
         self.observers_list = []
@@ -36,19 +48,18 @@ class Client:
 
     def start_new_folder_observer(self, file_folder_path):
         new_observer = Observer()
-        handler = MyHandler(self.servercoms, self.file_crypt, self)
+        handler = MyHandler(self.file_crypt, self)
         new_observer.schedule(handler, str(file_folder_path), recursive=True)
         self.observers_list.append(new_observer)
         new_observer.start()
 
-    def send_file(self, file_path):  # TODO: Not handling file modification when name nonce should be constant.
+    def send_file(self, file_path, file_name_nonce=globals.get_nonce()):  # TODO: Not handling file modification when name nonce should be constant.
         try:
-            file_name_nonce = globals.get_nonce()
-            file_data_nonce = globals.get_nonce()
+            file_data_nonce = globals.get_nonce()  # Unique
             enc_file_path, additional_data = self.file_crypt.encrypt_file(
                 file_path, file_name_nonce, file_data_nonce
             )
-            success = self.servercoms.send_file(enc_file_path, additional_data)
+            success = self.servercoms.send_file(enc_file_path, additional_data, self.userID)
         except PermissionError:
             print("Unable to send file immediately...")
             sleep(1)
@@ -69,7 +80,7 @@ class Client:
         if len(enc_file_name_list) != 1:
             raise NotImplementedError("Zero, two or more files on server derived from the same name", enc_file_name_list)
         try:
-            tmp_enc_file_path, additional_data = self.servercoms.get_file(str(enc_file_name_list[0]))
+            tmp_enc_file_path, additional_data = self.servercoms.get_file(str(enc_file_name_list[0]), self.userID)
         except FileNotFoundError:
             print("File not found on server.")
             return
@@ -80,8 +91,8 @@ class Client:
         server_file_list = globals.SERVER_FILE_LIST
         enc_path_lst = [lst[2] for lst in server_file_list if lst[0] == file_name]
         if len(enc_path_lst) != 1:
-            raise NotImplemented
-        self.servercoms.register_deletion_of_file(enc_path_lst[0])
+            raise NotImplementedError
+        self.servercoms.register_deletion_of_file(enc_path_lst[0], self.userID)
 
     def get_local_file_list(self):
         """Return a list where each element is the string name of this file"""
