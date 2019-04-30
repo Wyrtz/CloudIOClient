@@ -1,4 +1,5 @@
 import pathlib as pl
+import time
 
 from watchdog.events import FileSystemEventHandler
 
@@ -12,10 +13,11 @@ class MyHandler(FileSystemEventHandler):
     def __init__(self, file_crypt: FileCryptography, client):
         self.file_crypt = file_crypt
         self.client = client
+        self.new_files = {}
 
     def on_any_event(self, event):
         """Print any received event to console"""
-        # print(f'event type: {event.event_type}  path : {event.src_path}')
+        #print(f'event type: {event.event_type}  path : {event.src_path}')
         pass
 
     def on_created(self, event):
@@ -26,11 +28,35 @@ class MyHandler(FileSystemEventHandler):
         if relative_file_path in globals.DOWNLOADED_FILE_QUEUE:
             globals.DOWNLOADED_FILE_QUEUE.remove(relative_file_path)
             return
+        self.new_files[relative_file_path] = time.time()
         self.client.send_file(file_path)
 
     def on_deleted(self, event):
         abs_path = pl.Path(event.src_path)
         relative_path = abs_path.relative_to(globals.WORK_DIR)
         print("File deleted: " + str(relative_path))
-        server_file_list = globals.SERVER_FILE_LIST
         self.client.delete_remote_file(relative_path)
+
+    def on_modified(self, event):
+        if globals.IS_SYNCING: # Syncing causes modify events
+            return
+        cur_time = time.time()
+        file_path = pl.Path(event.src_path)
+        relative_file_path = file_path.relative_to(globals.WORK_DIR)
+        if relative_file_path in self.new_files:
+            time_of_create = self.new_files.get(relative_file_path)
+            if not cur_time - time_of_create > 1: # Ensure it is not the modify event from the create event
+                return
+            else: # Clean up in the dict
+                self.new_files.pop(relative_file_path)
+        print("File modified:" + str(relative_file_path))
+        # Get the nonce used for the filename such that the filename stays the same:
+        file_name_nonce = [lst[1] for lst in globals.SERVER_FILE_LIST if lst[0] == relative_file_path]
+        if len(file_name_nonce) != 1:
+            print("How could this happen D: ??")
+            raise NotImplementedError
+        file_name_nonce = file_name_nonce[0]
+        self.client.delete_remote_file(relative_file_path)
+        self.client.send_file(file_path, file_name_nonce=file_name_nonce)
+
+    # Todo: on_ rename file ?? (move event ??)

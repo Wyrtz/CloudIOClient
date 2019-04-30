@@ -18,7 +18,7 @@ class FileCryptography:
 
     def encrypt_relative_file_path(self, relative_file_path, nonce):
         return self.aesgcm.encrypt(
-            bytes(nonce, 'utf-8'),
+            bytes(str(nonce), 'utf-8'),
             bytes(str(relative_file_path), 'utf-8'),
             associated_data=None).hex() + ".cio"
 
@@ -48,11 +48,10 @@ class FileCryptography:
     def decrypt_relative_file_path(self, enc_file_name: pl.Path, nonce):
         enc_file_name = bytes.fromhex(str(enc_file_name.stem))
         return self.aesgcm.decrypt(
-            bytes(nonce, 'utf-8'), enc_file_name, associated_data=None)
+            bytes(str(nonce), 'utf-8'), enc_file_name, associated_data=None)
 
     def decrypt_file(self, file_path, additional_data):
         """Decrypt file_name and return name of the decrypted file"""
-        # ToDo: Placing file in files will result in watchdog re-uploading it...
         if file_path.suffix != ".cio":
             raise TypeError
         enc_file_name = file_path.stem

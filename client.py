@@ -69,7 +69,7 @@ class Client:
         relative_path = file_path.relative_to(globals.WORK_DIR)
         relative_enc_path = enc_file_path.relative_to(globals.TEMPORARY_FOLDER)
         if success:  # TODO: Check if redundant; see servercoms
-            print("File", file_path.stem, "send successfully!")
+            print("File\"" + file_path.stem + "\"send successfully!")
             globals.SERVER_FILE_LIST.append([relative_path, file_name_nonce, relative_enc_path])
 
     def get_file(self, file_name):
@@ -88,10 +88,11 @@ class Client:
         pl.Path.unlink(tmp_enc_file_path)
 
     def delete_remote_file(self, file_name: pl.Path):
-        server_file_list = globals.SERVER_FILE_LIST
-        enc_path_lst = [lst[2] for lst in server_file_list if lst[0] == file_name]
+        enc_path_lst = [lst[2] for lst in globals.SERVER_FILE_LIST if lst[0] == file_name]
         if len(enc_path_lst) != 1:
+            print("List is not 1 long! Contains:", enc_path_lst)
             raise NotImplementedError
+        globals.SERVER_FILE_LIST = [lst for lst in globals.SERVER_FILE_LIST if lst[0] != file_name]
         self.servercoms.register_deletion_of_file(enc_path_lst[0])
 
     def get_local_file_list(self):
@@ -104,6 +105,7 @@ class Client:
         return file_list
 
     def sync_files(self):
+        globals.IS_SYNCING = True
         local_file_list = self.get_local_file_list()
         enc_remote_file_list_with_nonces = self.servercoms.get_file_list()
         globals.SERVER_FILE_LIST = self.file_crypt.decrypt_file_list_extended(enc_remote_file_list_with_nonces)
@@ -115,6 +117,7 @@ class Client:
             self.send_file(abs_path)
         for file in files_not_on_client:
             self.get_file(file)
+        globals.IS_SYNCING = False
 
     def close_client(self):
         """Close all observers observing a folder"""

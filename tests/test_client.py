@@ -78,6 +78,40 @@ class TestClient(unittest.TestCase):
         sleep(self.sleep_time)
         self.assertIn(random_file_relative_path, self.client.get_local_file_list())
 
+    def test_modify_file(self):
+        """Create a file, modify it serveral times, get it back from server and ensure all modifications are present"""
+        # Create a file
+        random_file_path = self.create_random_file()
+        random_file_relative_path = random_file_path.relative_to(globals.WORK_DIR)
+        random_file_name = pl.Path(random_file_path.name)
+        # Modify the file and save/close
+        sleep(0.5)
+        with open(random_file_path, "ab") as file:
+            file.write(os.urandom(1024))
+        # Modify the file and save/close
+        sleep(0.5)
+        with open(random_file_path, "ab") as file:
+            file.write(os.urandom(1024))
+        # Modify the file and save/close
+        sleep(0.5)
+        with open(random_file_path, "ab") as file:
+            file.write(os.urandom(1024))
+        # Close client
+        sleep(0.5)
+        self.client.close_client()
+        with open(random_file_path, "rb") as file:
+            local_file_data = file.read()
+        # Delete file
+        pl.Path.unlink(random_file_path)
+        # Get it back from server
+        self.client.get_file(random_file_relative_path)
+        sleep(self.sleep_time)
+        # Make sure it contains all modification!
+        with open(random_file_path, "rb") as file:
+            remote_file_data = file.read()
+        self.assertEqual(local_file_data, remote_file_data, "Files not equal!")
+
+
     def create_random_file(self, path=globals.FILE_FOLDER):
         """Create a random file in the file folder, give back the path"""
         random_file_name = os.urandom(8).hex()

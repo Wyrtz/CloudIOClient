@@ -35,7 +35,8 @@ SERVER_LOCATION = 'wyrnas.myqnapcloud.com:8001'
 KEY_HASHES = pl.Path.joinpath(RESOURCE_DIR, 'key_hashes.txt')
 KEY_SALTS = pl.Path.joinpath(RESOURCE_DIR, 'key_salts.txt')  # TODO: Perhaps instead of static make random & record all salts.
 ENC_OLD_KEYS = pl.Path.joinpath(RESOURCE_DIR, 'enc_keys.txt')  # Should contain old key encryptions
-SERVER_FILE_LIST: list = []
+SERVER_FILE_LIST: list = []  # A list of lists containing [relative_path, file_name_nonce, relative_enc_path]
+IS_SYNCING = False
 
 
 def clear_tmp():
