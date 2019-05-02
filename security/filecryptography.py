@@ -62,6 +62,7 @@ class FileCryptography:
             associated_data=None).decode('utf-8')
         dec_file_path = pl.PurePath.joinpath(globals.WORK_DIR, dec_file_name)
         additional_data_json = json.dumps(additional_data)
+        dec_file_path.parent.mkdir(parents=True, exist_ok=True)
         with open(file_path, 'rb') as file:
             dec_file_data = self.aesgcm.decrypt(
                 bytes(additional_data['nonce2'], 'utf-8'),

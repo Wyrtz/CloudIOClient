@@ -12,7 +12,6 @@ from file_event_handler import MyHandler
 from watchdog.observers import Observer
 from resources import globals
 # TODO: Should be able to use old encrypted keys.
-# TODO: Modified files.
 # TODO: Can recover files under old password.
 
 
@@ -37,8 +36,8 @@ class Client:
         self.userID = hash_key_to_userID(key)
         self.servercoms = ServComs(server_location, self.userID)
         globals.SERVER_FILE_LIST = self.file_crypt.decrypt_file_list_extended(self.servercoms.get_file_list())
-        self.handler_thread = Thread(target=MyHandler, args=(self.file_crypt, self))
-        self.handler_thread.start()
+        # self.handler_thread = Thread(target=MyHandler, args=(self.file_crypt, self))
+        # self.handler_thread.start()
         # Start initial folder observer
         self.observers_list = []
         self.start_observing()
@@ -53,7 +52,7 @@ class Client:
         self.observers_list.append(new_observer)
         new_observer.start()
 
-    def send_file(self, file_path, file_name_nonce=globals.get_nonce()):  # TODO: Not handling file modification when name nonce should be constant.
+    def send_file(self, file_path, file_name_nonce=globals.get_nonce()):
         try:
             file_data_nonce = globals.get_nonce()  # Unique
             enc_file_path, additional_data = self.file_crypt.encrypt_file(
@@ -97,14 +96,18 @@ class Client:
 
     def get_local_file_list(self):
         """Return a list where each element is the string name of this file"""
-        # ToDo: recursive (folders)
-        file_list = os.listdir(self.file_folder)
-        file_list = [pl.Path(x) for x in file_list]
-        file_list = [pl.Path.joinpath(globals.FILE_FOLDER, x) for x in file_list]
-        file_list = [x.relative_to(globals.WORK_DIR) for x in file_list]
+        # # ToDo: recursive (folders)
+        # file_list = os.listdir(self.file_folder)
+        # file_list = [pl.Path(x) for x in file_list]
+        # file_list = [pl.Path.joinpath(globals.FILE_FOLDER, x) for x in file_list]
+        # file_list = [x.relative_to(globals.WORK_DIR) for x in file_list]
+        # return file_list
+        file_list = [i.relative_to(globals.WORK_DIR) for i in globals.FILE_FOLDER.glob("**/*.*")]
+
         return file_list
 
     def sync_files(self):
+        self.close_observers()
         globals.IS_SYNCING = True
         local_file_list = self.get_local_file_list()
         enc_remote_file_list_with_nonces = self.servercoms.get_file_list()
@@ -118,10 +121,12 @@ class Client:
         for file in files_not_on_client:
             self.get_file(file)
         globals.IS_SYNCING = False
+        self.start_observing()
 
-    def close_client(self):
+    def close_observers(self):
         """Close all observers observing a folder"""
         for observer in self.observers_list:
             observer.stop()
         for observer in self.observers_list:
             observer.join()
+        return

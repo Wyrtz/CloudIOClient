@@ -97,19 +97,19 @@ class CLI:
                     print("Synchronising...")
                     self.client.sync_files()
                     print("Synchronising done!")
-                if command == "ls" or command == "lf" or command == "local_files":
+                elif command == "ls" or command == "lf" or command == "local_files":
                     print("Local files:")
                     self.print_local_files()
-                if command == "rf" or command == "remote_files":
+                elif command == "rf" or command == "remote_files":
                     self.get_or_delete_avaliable = True
                     print("Remote files:")
                     self.print_remote_files()
-                if command == "diff" or command == "d":
+                elif command == "diff" or command == "d":
                     self.get_or_delete_avaliable = True
                     self.print_diff_to_server()
-                if command == 'exit' or command == 'e':
+                elif command == 'exit' or command == 'e':
                     raise KeyboardInterrupt
-                if command == 'replace_password' or command == "re_pw":
+                elif command == 'replace_password' or command == "re_pw":
                     self.clear_screen()
                     print("Initiated password replacement.")
                     old_pw = getpass("Type old password:")
@@ -132,7 +132,7 @@ class CLI:
 
         except KeyboardInterrupt:
             self.clear_screen(print_logo=False)
-            self.client.close_client()
+            self.client.close_observers()
 
     def interact_with_server(self, commands, command):
         error_message = f"{Fore.RED}Provide what file (number) you want{Style.RESET_ALL}"
@@ -168,7 +168,7 @@ class CLI:
         spaceing = lambda fewer_spacees: " " * (6-fewer_spacees)
         print(f"{Fore.GREEN}\t #{spaceing(1)}File Name{Style.RESET_ALL}")
         for numb, element in enumerate(list_to_print):
-            len_numb = len(str(numb))
+            len_numb = len(str(numb+1))
             print("\t", numb+1, end=spaceing(len_numb))
             print(element)
 

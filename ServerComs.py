@@ -11,7 +11,7 @@ import requests
 from resources import globals
 
 
-class ServComs():  # TODO: Refactor such that userID is input into the servercoms.
+class ServComs():
     """Communicates with the file-host server"""
     # ToDO: Do we even have a connection ?
 

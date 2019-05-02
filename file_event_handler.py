@@ -23,6 +23,8 @@ class MyHandler(FileSystemEventHandler):
     def on_created(self, event):
         """Send newly created file to the server"""
         file_path = pl.Path(event.src_path)
+        if file_path.is_dir():
+            return
         relative_file_path = file_path.relative_to(globals.WORK_DIR)
         print("File created: " + str(relative_file_path))
         if relative_file_path in globals.DOWNLOADED_FILE_QUEUE:
@@ -38,25 +40,33 @@ class MyHandler(FileSystemEventHandler):
         self.client.delete_remote_file(relative_path)
 
     def on_modified(self, event):
-        if globals.IS_SYNCING: # Syncing causes modify events
-            return
         cur_time = time.time()
         file_path = pl.Path(event.src_path)
+        if file_path.is_dir():
+            return
         relative_file_path = file_path.relative_to(globals.WORK_DIR)
         if relative_file_path in self.new_files:
             time_of_create = self.new_files.get(relative_file_path)
-            if not cur_time - time_of_create > 1: # Ensure it is not the modify event from the create event
+            if not cur_time - time_of_create > 1:  # Ensure it is not the modify event from the create event
                 return
-            else: # Clean up in the dict
+            else:  # Clean up in the dict
                 self.new_files.pop(relative_file_path)
         print("File modified:" + str(relative_file_path))
         # Get the nonce used for the filename such that the filename stays the same:
         file_name_nonce = [lst[1] for lst in globals.SERVER_FILE_LIST if lst[0] == relative_file_path]
         if len(file_name_nonce) != 1:
             print("How could this happen D: ??")
-            raise NotImplementedError
+            error_message = f'Number of nonces match is not 1: {file_name_nonce}'
+            raise NotImplementedError(error_message)
         file_name_nonce = file_name_nonce[0]
         self.client.delete_remote_file(relative_file_path)
         self.client.send_file(file_path, file_name_nonce=file_name_nonce)
+
+
+    def on_moved(self, event):
+        file_path = pl.Path(event.src_path)
+        relative_file_path = file_path.relative_to(globals.WORK_DIR)
+        print("File moved:", str(relative_file_path))
+        print("Not implemented!!")
 
     # Todo: on_ rename file ?? (move event ??)
