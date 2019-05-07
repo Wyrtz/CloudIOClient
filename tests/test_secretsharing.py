@@ -93,22 +93,23 @@ class TestPolynomial(TestCase):
 
     def test_can_recover_secret(self):
         prime = 11
-        secret = (7).to_bytes(256, byteorder, signed=False)
+        secret = (7).to_bytes(32, byteorder, signed=False)
         degree = 2
         # P = 7 + 5x + 2x² -> P(2) = 7 + 10 + 8 = 25 = 3, P(4) = 7 + 20 + 32 = 59 = 4, P(6) = 7 + 30 + 72 = 109 = 10
         points = [(2, FInt(3, prime)), (4, FInt(4, prime)), (6, FInt(10, prime))]
         secret_ = recover_secret(degree, points, prime)
         self.assertTrue(secret == secret_, str(secret_) + " != " + str(secret))
-        secret = (3).to_bytes(256, byteorder, signed=False)
+        secret = (3).to_bytes(32, byteorder, signed=False)
         # P = 3 + 2x + 5x² -> P(1) = 10, P(2) = 5, P(3) = 10
         points = [(1, FInt(10, prime)), (2, FInt(5, prime)), (3, FInt(10, prime))]
         secret_ = recover_secret(degree, points, prime)
         self.assertTrue(secret == secret_, str(secret_) + " != " + str(secret))
 
     def test_can_split_then_recover_secret(self):
-        secret = (10).to_bytes(256, byteorder=byteorder, signed=False)
-        t = 4
+        secret = (10).to_bytes(32, byteorder=byteorder, signed=False)
+        t = 4  # The max number of points one should be able to obtain without being able to recover secret.
         n = 10
         shares = split_secret(secret, t, n)
+        print(shares)
         secret_ = recover_secret(t, shares)
         self.assertEqual(secret, secret_, "Secrets don't match ergo didn't recover secret.")

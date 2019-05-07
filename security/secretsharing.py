@@ -87,6 +87,9 @@ class FInt:
     def __neg__(self):
         return FInt(-self.value % self.prime, self.prime)
 
+    def __repr__(self):
+        return "F" + str(self.value)
+
 
 class Polynomial:
     def __init__(self, secret, degree, prime=the_prime):  # 2**256 < the_prime < 2**257
@@ -129,10 +132,10 @@ def recover_secret(t, points, prime=the_prime) -> bytes:
             xj = x_vals[jdx]
             PI *= xj / (xj - xi)
         K += yi * PI
-    return K.value.to_bytes(256, byteorder=byteorder, signed=False)
+    return K.value.to_bytes(32, byteorder=byteorder, signed=False)
 
 
 def split_secret(secret: bytes, t: int, n: int) -> list:
-    assert len(secret) == 256, "Secret should be 256 long."
+    assert len(secret) == 32, "Secret should be 256 long."
     p = Polynomial(secret, t)
     return [p.evaluate_point(idx) for idx in range(1, n+1)]
