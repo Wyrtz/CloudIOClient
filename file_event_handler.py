@@ -54,12 +54,11 @@ class MyHandler(FileSystemEventHandler):
         print("File modified:" + str(relative_file_path))
         # Get the nonce used for the filename such that the filename stays the same:
         file_name_nonce = [lst[1] for lst in globals.SERVER_FILE_LIST if lst[0] == relative_file_path]
-        if len(file_name_nonce) != 1:
+        if len(set(file_name_nonce)) != 1:
             print("How could this happen D: ??")
             error_message = f'Number of nonces match is not 1: {file_name_nonce}'
             raise NotImplementedError(error_message)
         file_name_nonce = file_name_nonce[0]
-        self.client.delete_remote_file(relative_file_path)
         self.client.send_file(file_path, file_name_nonce=file_name_nonce)
 
 

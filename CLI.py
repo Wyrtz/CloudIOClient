@@ -97,7 +97,7 @@ class CLI:
                     if not success:
                         continue
 
-                if command == 'df' or command == 'delete_file':
+                if command == 'df' or command == "del" or command == 'delete_file':
                     success = self.interact_with_server(commands, 'df')
                     if not success:
                         continue
@@ -105,7 +105,8 @@ class CLI:
             self.get_or_delete_avaliable = False
             if command == "sync" or command == "s":
                 print("Synchronising...")
-                self.client.sync_files()
+                sync_dict = self.generate_sync_dict()
+                self.client.sync_files(sync_dict)
                 print("Synchronising done!")
             elif command == "ls" or command == "lf" or command == "local_files":
                 print("Local files:")
@@ -120,7 +121,8 @@ class CLI:
                 self.print_diff_to_server()
             elif command == "ss" or command == "sync_status":
                 self.get_or_delete_avaliable = True
-                self.print_sync_status()
+                sync_dict = self.generate_sync_dict()
+                self.print_sync_dict(sync_dict)
             elif command == 'exit' or command == 'e':
                 raise KeyboardInterrupt
             elif command == 'replace_password' or command == "re_pw":
@@ -139,10 +141,9 @@ class CLI:
                 except (BadKeyException, BadPasswordSelected):
                     input("Failed to replace password. Press enter to continue.")
                     self.clear_screen()
-            else:
-                print()
-                print(self.divider)
-                print(self.get_help())
+            print()
+            print(self.divider)
+            print(self.get_help())
 
     def interact_with_server(self, commands, command):
         error_message = f"{Fore.RED}Provide what file (number) you want"
@@ -157,28 +158,35 @@ class CLI:
             print(error_message)
             return False
         try:
-            requested_file = self.dec_remote_file_list[number - 1]
+            requested_file = globals.SERVER_FILE_LIST[number - 1][0]
         except IndexError:
             print(error_message)
             return False
 
         if command == "gf" or command == "get":
             print("Getting file...")
-            self.client.get_file(requested_file)
+            self.client.get_file(requested_file)   # ToDO: can run "get file" on files we already have, and requests for files the server does not have is wierd!
             return True
 
         if command == 'df' or command == "del":
+            if pl.Path.exists(requested_file):
+                answer = input("Delete local file as well ? (y,n)")
+                answer = answer.lower()
+                if answer == "y" or answer == "yes":
+                    pl.Path.unlink(requested_file)
+                    return True
             print("Deleting file...")
             print(requested_file)
             self.client.delete_remote_file(requested_file)
+            return True
 
     def print_remote_files(self):
         enc_remote_file_list = self.client.servercoms.get_file_list()
         if len(enc_remote_file_list) == 0:
             print("\t(no files on server)")
         else:
-            self.dec_remote_file_list = self.client.file_crypt.decrypt_file_list(enc_remote_file_list)
-            file_names_only = [touble[0] for touble in self.dec_remote_file_list]
+            globals.SERVER_FILE_LIST = self.client.file_crypt.decrypt_file_list(enc_remote_file_list)
+            file_names_only = [touble[0] for touble in globals.SERVER_FILE_LIST]
             self.print_list(file_names_only)
 
     def print_local_files(self):
@@ -192,6 +200,7 @@ class CLI:
         local_file_list = self.client.get_local_file_list()
         enc_remote_file_list = self.client.servercoms.get_file_list()
         self.dec_remote_file_list = self.client.file_crypt.decrypt_file_list(enc_remote_file_list)
+        globals.SERVER_FILE_LIST = self.dec_remote_file_list
         pathlib_remote_file_list = [pl.Path(x[0]) for x in self.dec_remote_file_list]
         files_not_on_server = globals.get_list_difference(local_file_list, pathlib_remote_file_list)
         files_not_on_client = globals.get_list_difference(pathlib_remote_file_list, local_file_list)
@@ -217,8 +226,9 @@ class CLI:
             print("\t", numb + 1, end=self.calculate_spacing(numb))
             print(element)
 
-    def print_sync_status(self):
-        """Prints all files in system and their synchronisation status"""
+    def generate_sync_dict(self):
+        """Generates a dictionary with key:files value:(client_time, server_time)
+        representing the time stamp of a file for client or server. time stamp 0 = this party does not have the file"""
         # Create a dictionary with key = file name, value = timestamp for local files
         local_file_list = self.client.get_local_file_list()
         c_dict = {}
@@ -228,6 +238,7 @@ class CLI:
         # Do the same for server files:
         enc_remote_file_list = self.client.servercoms.get_file_list()
         dec_remote_file_list = self.client.file_crypt.decrypt_file_list_extended(enc_remote_file_list)
+        globals.SERVER_FILE_LIST = dec_remote_file_list
         pathlib_remote_file_list = [(pl.Path(x[0]), x[3]) for x in dec_remote_file_list]  # idx 0 = name, idx 3 = timestamp
         s_dict = {}
         for element in pathlib_remote_file_list:
@@ -245,14 +256,17 @@ class CLI:
             val = s_dict.get(key) if key in s_dict else 0
             full_dict[key] = (full_dict.get(key), val)
 
-        self.print_file_time_dict(full_dict)
+        return full_dict
 
-    def print_file_time_dict(self, file_ctime_stime_dict: dict):
+    def print_sync_dict(self, sync_dict: dict):
+        """Prints a synchronisation dictionary as produced by "generate_sync_dict"""
         i = 0
         print(f"{Back.BLACK}\t #{self.calculate_spacing(1)}File Name")
-        for key in file_ctime_stime_dict:
+        if len(sync_dict) == 0:
+            print("\tNo files on server or client")
+        for key in sync_dict:
             print("\t", i + 1, end=self.calculate_spacing(i))
-            c_time, s_time = file_ctime_stime_dict.get(key)
+            c_time, s_time = sync_dict.get(key)
             colour = Back.GREEN
             if c_time > s_time:
                 colour = Back.BLUE

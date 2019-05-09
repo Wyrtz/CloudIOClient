@@ -76,7 +76,7 @@ class Client:
            If the candidate is valid and newer, keep it."""
         globals.DOWNLOADED_FILE_QUEUE.append(file_name)
         enc_file_name_list = [lst[2] for lst in globals.SERVER_FILE_LIST if lst[0] == file_name]
-        if len(enc_file_name_list) != 1:
+        if len(set(enc_file_name_list)) != 1:
             raise NotImplementedError("Zero, two or more files on server derived from the same name", enc_file_name_list)
         try:
             tmp_enc_file_path, additional_data = self.servercoms.get_file(str(enc_file_name_list[0]))
@@ -89,39 +89,47 @@ class Client:
     def delete_remote_file(self, file_name: pl.Path):
         enc_path_lst = [lst[2] for lst in globals.SERVER_FILE_LIST if lst[0] == file_name]
         if len(enc_path_lst) != 1:
-            print("List is not 1 long! Contains:", enc_path_lst)
-            raise NotImplementedError
+            raise NotImplementedError("List is not 1 long! Contains: " + str(enc_path_lst))
         globals.SERVER_FILE_LIST = [lst for lst in globals.SERVER_FILE_LIST if lst[0] != file_name]
         self.servercoms.register_deletion_of_file(enc_path_lst[0])
 
     def get_local_file_list(self):
         """Return a list where each element is the string name of this file"""
-        # # ToDo: recursive (folders)
-        # file_list = os.listdir(self.file_folder)
-        # file_list = [pl.Path(x) for x in file_list]
-        # file_list = [pl.Path.joinpath(globals.FILE_FOLDER, x) for x in file_list]
-        # file_list = [x.relative_to(globals.WORK_DIR) for x in file_list]
-        # return file_list
         file_list = [i.relative_to(globals.WORK_DIR) for i in globals.FILE_FOLDER.glob("**/*.*")]
 
         return file_list
 
-    def sync_files(self):
+    def sync_files(self, sync_dict):
         self.close_observers()
-        globals.IS_SYNCING = True
-        local_file_list = self.get_local_file_list()
-        enc_remote_file_list_with_nonces_and_timestamp = self.servercoms.get_file_list()
-        globals.SERVER_FILE_LIST = self.file_crypt.decrypt_file_list_extended(enc_remote_file_list_with_nonces_and_timestamp)
-        remote_file_list = [lst[0] for lst in globals.SERVER_FILE_LIST]
-        files_not_on_server = globals.get_list_difference(local_file_list, remote_file_list)
-        files_not_on_client = globals.get_list_difference(remote_file_list, local_file_list)
-        for file in files_not_on_server:
-            abs_path = pl.Path.joinpath(globals.WORK_DIR, file)
-            self.send_file(abs_path)
-        for file in files_not_on_client:
-            self.get_file(file)
-        globals.IS_SYNCING = False
+        for key in sync_dict:
+            c_time, s_time = sync_dict.get(key)
+            key = pl.Path.joinpath(globals.WORK_DIR, key)
+            if c_time < s_time:  # Server has the newest version
+                # Send and delete file locally, such that the client can recover it if needed
+                if key.exists():
+                    self.send_file(key)
+                    key.unlink()
+                rel_key = key.relative_to(globals.WORK_DIR)
+                self.get_file(rel_key)
+            elif c_time > s_time:  # Client has the newest version
+                self.send_file(key)
         self.start_observing()
+
+        # self.close_observers()
+        # globals.IS_SYNCING = True
+        # local_file_list = self.get_local_file_list()
+        # enc_remote_file_list_with_nonces_and_timestamp = self.servercoms.get_file_list()
+        # globals.SERVER_FILE_LIST = self.file_crypt.decrypt_file_list_extended(enc_remote_file_list_with_nonces_and_timestamp)
+        # remote_file_list = [lst[0] for lst in globals.SERVER_FILE_LIST]
+        # files_not_on_server = globals.get_list_difference(local_file_list, remote_file_list)
+        # files_not_on_client = globals.get_list_difference(remote_file_list, local_file_list)
+        # for file in files_not_on_server:
+        #     abs_path = pl.Path.joinpath(globals.WORK_DIR, file)
+        #     self.send_file(abs_path)
+        # for file in files_not_on_client:
+        #     self.get_file(file)
+        # globals.IS_SYNCING = False
+        # self.start_observing()
 
     def close_observers(self):
         """Close all observers observing a folder"""

@@ -36,7 +36,7 @@ class TestServercoms(unittest.TestCase):
         enc_file_name = enc_file_path.name
         # Get list back from server, and see if it is there
         file_list = self.serverComs.get_file_list()
-        self.assertIn([enc_file_name, self.nonce1], file_list, "File not on the server!")
+        self.assertIn(enc_file_name, [x[0] for x in file_list], "File not on the server!")
 
     def test_receive_send_file(self):
         with open(self.file_path, 'rb') as file:
