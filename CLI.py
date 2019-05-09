@@ -11,7 +11,6 @@ import colorama
 
 from resources import globals
 import pathlib as pl
-import datetime
 
 from client import Client
 from security import keyderivation
@@ -78,65 +77,72 @@ class CLI:
             sleep(1.5)
             self.clear_screen()
             self.get_or_delete_avaliable = False
-            while True:
-                command_input = input("Command:")
-                commands = command_input.split(" ")
-                command = commands[0]
-                command = command.lower()
-                self.clear_screen()
-                if self.get_or_delete_avaliable:
-                    if command == "gf" or command == "get_file":
-                        success = self.interact_with_server(commands, 'gf')
-                        if not success:
-                            continue
 
-                    if command == 'df' or command == 'delete_file':
-                        success = self.interact_with_server(commands, 'df')
-                        if not success:
-                            continue
-
-                self.get_or_delete_avaliable = False
-                if command == "sync" or command == "s":
-                    print("Synchronising...")
-                    self.client.sync_files()
-                    print("Synchronising done!")
-                elif command == "ls" or command == "lf" or command == "local_files":
-                    print("Local files:")
-                    self.print_local_files()
-                elif command == "rf" or command == "remote_files":
-                    self.get_or_delete_avaliable = True
-                    print("Remote files:")
-                    self.print_remote_files()
-                elif command == "diff" or command == "d":
-                    self.get_or_delete_avaliable = True
-                    # self.print_diff_to_server()
-                    self.print_sync_status()
-                elif command == 'exit' or command == 'e':
-                    raise KeyboardInterrupt
-                elif command == 'replace_password' or command == "re_pw":
-                    self.clear_screen()
-                    print("Initiated password replacement.")
-                    old_pw = getpass("Type old password:")
-                    new_password = getpass("Type new password:")
-                    new_password_ = getpass("Repeat new password:")
-                    if new_password != new_password_:
-                        self.clear_screen()
-                        print("New password doens't match.")
-                    try:
-                        self.client.kd.replace_pw(old_pw=old_pw, new_pw=new_password)
-                        input("Replaced password successfully. Press enter to continue.")
-                        self.clear_screen()
-                    except (BadKeyException, BadPasswordSelected):
-                        input("Failed to replace password. Press enter to continue.")
-                        self.clear_screen()
-                else:
-                    print()
-                    print(self.divider)
-                    print(self.get_help())
+            self.start_user_input_loop()
 
         except KeyboardInterrupt:
             self.clear_screen(print_logo=False)
             self.client.close_observers()
+
+    def start_user_input_loop(self):
+        while True:
+            command_input = input("Command:")
+            commands = command_input.split(" ")
+            command = commands[0]
+            command = command.lower()
+            self.clear_screen()
+            if self.get_or_delete_avaliable:
+                if command == "gf" or command == "get_file":
+                    success = self.interact_with_server(commands, 'gf')
+                    if not success:
+                        continue
+
+                if command == 'df' or command == 'delete_file':
+                    success = self.interact_with_server(commands, 'df')
+                    if not success:
+                        continue
+
+            self.get_or_delete_avaliable = False
+            if command == "sync" or command == "s":
+                print("Synchronising...")
+                self.client.sync_files()
+                print("Synchronising done!")
+            elif command == "ls" or command == "lf" or command == "local_files":
+                print("Local files:")
+                self.print_local_files()
+            elif command == "rf" or command == "remote_files":
+                self.get_or_delete_avaliable = True
+                print("Remote files:")
+                self.print_remote_files()
+            elif command == "diff" or command == "d":
+                self.get_or_delete_avaliable = True
+                # self.print_diff_to_server()
+                self.print_diff_to_server()
+            elif command == "ss" or command == "sync_status":
+                self.get_or_delete_avaliable = True
+                self.print_sync_status()
+            elif command == 'exit' or command == 'e':
+                raise KeyboardInterrupt
+            elif command == 'replace_password' or command == "re_pw":
+                self.clear_screen()
+                print("Initiated password replacement.")
+                old_pw = getpass("Type old password:")
+                new_password = getpass("Type new password:")
+                new_password_ = getpass("Repeat new password:")
+                if new_password != new_password_:
+                    self.clear_screen()
+                    print("New password doens't match.")
+                try:
+                    self.client.kd.replace_pw(old_pw=old_pw, new_pw=new_password)
+                    input("Replaced password successfully. Press enter to continue.")
+                    self.clear_screen()
+                except (BadKeyException, BadPasswordSelected):
+                    input("Failed to replace password. Press enter to continue.")
+                    self.clear_screen()
+            else:
+                print()
+                print(self.divider)
+                print(self.get_help())
 
     def interact_with_server(self, commands, command):
         error_message = f"{Fore.RED}Provide what file (number) you want"
@@ -165,40 +171,6 @@ class CLI:
             print("Deleting file...")
             print(requested_file)
             self.client.delete_remote_file(requested_file)
-
-    def calculate_spaceing(self, numb):
-        len_numb = len(str(numb+1))
-        return " "*(6-len_numb)
-
-    def print_list(self, list_names_to_print, list_times_to_print=None):
-        # list_to_print_str = [str(x) for x in list_names_to_print]
-        # longest_element_length = len(max(list_to_print_str, key=len))
-        print(f"{Back.BLACK}\t #{self.calculate_spaceing(1)}File Name")
-        for numb, element in enumerate(list_names_to_print):
-            print("\t", numb+1, end=self.calculate_spaceing(numb))
-            if list_times_to_print:
-                try:
-                    s_time = list_times_to_print[numb]
-                except IndexError:
-                    s_time = 0
-                try:
-                    c_time = element.stat().st_mtime
-                except FileNotFoundError:
-                    c_time = 0
-                colour = Back.GREEN
-                if c_time > s_time:
-                    colour = Back.BLUE
-                elif c_time < s_time:
-                    colour = Back.RED
-                print(f'{colour}{element}')
-                continue
-            print(element) #, datetime.datetime.fromtimestamp(pl.Path(element).stat().st_mtime), sep="\t")
-
-        print(self.divider)
-        print(f"{Back.GREEN}\tGreen:\tUp to date")
-        print(f"{Back.BLUE}\tBlue:\tClient version newer than server version")
-        print(f"{Back.RED}\tRed:\tServer version newer than client version")
-        print(self.divider)
 
     def print_remote_files(self):
         enc_remote_file_list = self.client.servercoms.get_file_list()
@@ -236,19 +208,70 @@ class CLI:
             print("Files not on server:")
             self.print_list(files_not_on_server)
 
+    def print_list(self, list_names_to_print):
+        """Prints a given list, with each line enumerated"""
+        # list_to_print_str = [str(x) for x in list_names_to_print]
+        # longest_element_length = len(max(list_to_print_str, key=len))
+        print(f"{Back.BLACK}\t #{self.calculate_spacing(1)}File Name")
+        for numb, element in enumerate(list_names_to_print):
+            print("\t", numb + 1, end=self.calculate_spacing(numb))
+            print(element)
+
     def print_sync_status(self):
+        """Prints all files in system and their synchronisation status"""
+        # Create a dictionary with key = file name, value = timestamp for local files
         local_file_list = self.client.get_local_file_list()
+        c_dict = {}
+        for element in local_file_list:
+            c_dict[element] = element.stat().st_mtime
+
+        # Do the same for server files:
         enc_remote_file_list = self.client.servercoms.get_file_list()
-        dec_remote_file_list = self.client.file_crypt.decrypt_file_list(enc_remote_file_list)
-        pathlib_remote_file_list = [pl.Path(x[0]) for x in dec_remote_file_list]
-        files_not_on_server = globals.get_list_difference(local_file_list, pathlib_remote_file_list )
-        l = [x[0] for x in dec_remote_file_list]
-        l.extend([pl.Path(x) for x in files_not_on_server])
-        self.print_list(l, [x[1] for x in dec_remote_file_list])
+        dec_remote_file_list = self.client.file_crypt.decrypt_file_list_extended(enc_remote_file_list)
+        pathlib_remote_file_list = [(pl.Path(x[0]), x[3]) for x in dec_remote_file_list]  # idx 0 = name, idx 3 = timestamp
+        s_dict = {}
+        for element in pathlib_remote_file_list:
+            s_dict[element[0]] = element[1]
+
+        # Copy the client dict, and add the uniques from the server dict.
+        # Value = 0 since this means the client does not have this file, thus setting a timestamp of as old as possible
+        full_dict = c_dict.copy()
+        for key in s_dict:
+            if key not in full_dict:
+                full_dict[key] = 0
+
+        # Create the tuple dictionary key = filename, value = (c_time, s_time)
+        for key in full_dict:
+            val = s_dict.get(key) if key in s_dict else 0
+            full_dict[key] = (full_dict.get(key), val)
+
+        self.print_file_time_dict(full_dict)
+
+    def print_file_time_dict(self, file_ctime_stime_dict: dict):
+        i = 0
+        print(f"{Back.BLACK}\t #{self.calculate_spacing(1)}File Name")
+        for key in file_ctime_stime_dict:
+            print("\t", i + 1, end=self.calculate_spacing(i))
+            c_time, s_time = file_ctime_stime_dict.get(key)
+            colour = Back.GREEN
+            if c_time > s_time:
+                colour = Back.BLUE
+            elif c_time < s_time:
+                colour = Back.RED
+            print(f'{colour}{key}')
+            i += 1
+
+        print(self.divider)
+        print(f"{Back.GREEN}\tGreen:\tUp to date")
+        print(f"{Back.BLUE}\tBlue:\tClient version newer than server version")
+        print(f"{Back.RED}\tRed:\tServer version newer than client version")
+        print(self.divider)
+
 
 
 
     def clear_screen(self, print_logo=True):
+        """Clears the terminal no matter the OS"""
         if platform.system() == 'Windows':
             os.system('cls')
         else:
@@ -257,7 +280,12 @@ class CLI:
             figlet = Figlet()
             print(f'{Fore.CYAN}{figlet.renderText(globals.PROJECT_NAME)}{Style.RESET_ALL}')
 
+    def calculate_spacing(self, numb):
+        len_numb = len(str(numb + 1))
+        return " " * (6 - len_numb)
+
     def get_help(self):
+        """Prints the avaliable options in this software"""
         help = f"""
 Available commands:
 {Fore.GREEN}    What                Command {Style.RESET_ALL}
@@ -267,6 +295,7 @@ Available commands:
     Local_files         (ls, lf, local_files)
     Remote_files        (rf, remote_files)
     Diff_local/remote   (diff, d)
+    Sync status         (ss, sync_status)
     Replace password    (replace pw, replace password)
     Exit                (e, exit)
                         """
@@ -278,6 +307,7 @@ Available commands:
         if self.get_or_delete_avaliable:
             help += additional
         return help
+
 
 if __name__ == "__main__":
     # serverIP = 'wyrnas.myqnapcloud.com:8000'
