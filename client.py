@@ -1,16 +1,16 @@
-import os
 import pathlib as pl
-from threading import Thread
+from hashlib import sha3_224
 from time import sleep
 
-from hashlib import sha3_224
+from watchdog.observers import Observer
 
 from ServerComs import ServComs
+from file_event_handler import MyHandler
+from resources import globals
 from security import keyderivation, secretsharing
 from security.filecryptography import FileCryptography
-from file_event_handler import MyHandler
-from watchdog.observers import Observer
-from resources import globals
+
+
 # TODO: Should be able to use old encrypted keys.
 # TODO: Can recover files under old password.
 
