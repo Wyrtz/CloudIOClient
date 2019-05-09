@@ -69,8 +69,10 @@ class CLI:
             except BadKeyException:
                 self.clear_screen()
                 print(f"{Fore.RED}Wrong username or password")
-                sleep(2)
+                # TODO: Forgot password? Do you have shares? Input them now:...
+                sleep(1)
                 self.start_user_interface()
+                return
             self.clear_screen(False)
             welcome = "Welcome   " + username + " !"
             print(figlet.renderText(welcome))
@@ -139,6 +141,32 @@ class CLI:
                 except (BadKeyException, BadPasswordSelected):
                     input("Failed to replace password. Press enter to continue.")
                     self.clear_screen()
+            elif command == 'backup_password':
+                r1 = input("You are about to backup your password. Are you sure you want to do this?(y/n)")
+                if r1 == 'n':
+                    continue
+                elif r1 != 'y':
+                    print('Sorry, I could not interpret that input.')
+                    continue
+                total = input("How many pieces do you want in total?(int)")
+                try:
+                    total = int(total)
+                except ValueError:
+                    print("Sorry, can't interpret that as an int. Exiting backup.")
+                    continue
+                to_recover_from = input("How many pieces should be necessary to recover?(int)")
+                try:
+                    to_recover_from = int(to_recover_from)
+                except ValueError:
+                    print("Sorry, can't interpret that as an int. Exiting backup.")
+                    continue
+                password = getpass("Type in your password to confirm.")
+                shares = self.client.backup_key(password, to_recover_from, total)
+                print("These are your shares:")
+                for share in shares:
+                    print(share)
+                print("When you have written these down or distributed them press enter.")
+                input('Remember; these should only be parties you can trust not to collaborate against you.')
             else:
                 print()
                 print(self.divider)
