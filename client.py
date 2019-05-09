@@ -110,8 +110,8 @@ class Client:
         self.close_observers()
         globals.IS_SYNCING = True
         local_file_list = self.get_local_file_list()
-        enc_remote_file_list_with_nonces = self.servercoms.get_file_list()
-        globals.SERVER_FILE_LIST = self.file_crypt.decrypt_file_list_extended(enc_remote_file_list_with_nonces)
+        enc_remote_file_list_with_nonces_and_timestamp = self.servercoms.get_file_list()
+        globals.SERVER_FILE_LIST = self.file_crypt.decrypt_file_list_extended(enc_remote_file_list_with_nonces_and_timestamp)
         remote_file_list = [lst[0] for lst in globals.SERVER_FILE_LIST]
         files_not_on_server = globals.get_list_difference(local_file_list, remote_file_list)
         files_not_on_client = globals.get_list_difference(remote_file_list, local_file_list)

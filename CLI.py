@@ -5,11 +5,13 @@ from time import sleep
 
 from pyfiglet import Figlet
 from colorama import Fore
+from colorama import Back
 from colorama import Style
 import colorama
 
 from resources import globals
 import pathlib as pl
+import datetime
 
 from client import Client
 from security import keyderivation
@@ -19,8 +21,9 @@ from security.keyderivation import BadKeyException, BadPasswordSelected
 class CLI:
 
     def __init__(self):
+        colorama.init(autoreset=True)
+        self.divider = "*"*40
         self.start_user_interface()
-        colorama.init()
 
     def start_user_interface(self):
         """While loop that reads input and calls associated functions"""
@@ -66,7 +69,7 @@ class CLI:
                 self.client = Client(username, password, server_location=server_location)
             except BadKeyException:
                 self.clear_screen()
-                print(f"{Fore.RED}Wrong username or password{Style.RESET_ALL}")
+                print(f"{Fore.RED}Wrong username or password")
                 sleep(2)
                 self.start_user_interface()
             self.clear_screen(False)
@@ -106,7 +109,8 @@ class CLI:
                     self.print_remote_files()
                 elif command == "diff" or command == "d":
                     self.get_or_delete_avaliable = True
-                    self.print_diff_to_server()
+                    # self.print_diff_to_server()
+                    self.print_sync_status()
                 elif command == 'exit' or command == 'e':
                     raise KeyboardInterrupt
                 elif command == 'replace_password' or command == "re_pw":
@@ -127,7 +131,7 @@ class CLI:
                         self.clear_screen()
                 else:
                     print()
-                    print("*"*40)
+                    print(self.divider)
                     print(self.get_help())
 
         except KeyboardInterrupt:
@@ -135,9 +139,9 @@ class CLI:
             self.client.close_observers()
 
     def interact_with_server(self, commands, command):
-        error_message = f"{Fore.RED}Provide what file (number) you want{Style.RESET_ALL}"
+        error_message = f"{Fore.RED}Provide what file (number) you want"
         if not len(commands) == 2:
-            print(f'{Fore.RED}ERROR, 2 arguments required (command, number){Style.RESET_ALL}')
+            print(f'{Fore.RED}ERROR, 2 arguments required (command, number)')
             self.get_or_delete_avaliable = False
             return False
         number = commands[1]
@@ -152,25 +156,49 @@ class CLI:
             print(error_message)
             return False
 
-        if command == "gf":
+        if command == "gf" or command == "get":
             print("Getting file...")
             self.client.get_file(requested_file)
             return True
 
-        if command == 'df':
+        if command == 'df' or command == "del":
             print("Deleting file...")
             print(requested_file)
             self.client.delete_remote_file(requested_file)
 
-    def print_list(self, list_to_print):
-        list_to_print_str = [str(x) for x in list_to_print]
+    def calculate_spaceing(self, numb):
+        len_numb = len(str(numb+1))
+        return " "*(6-len_numb)
+
+    def print_list(self, list_names_to_print, list_times_to_print=None):
+        # list_to_print_str = [str(x) for x in list_names_to_print]
         # longest_element_length = len(max(list_to_print_str, key=len))
-        spaceing = lambda fewer_spacees: " " * (6-fewer_spacees)
-        print(f"{Fore.GREEN}\t #{spaceing(1)}File Name{Style.RESET_ALL}")
-        for numb, element in enumerate(list_to_print):
-            len_numb = len(str(numb+1))
-            print("\t", numb+1, end=spaceing(len_numb))
-            print(element)
+        print(f"{Back.BLACK}\t #{self.calculate_spaceing(1)}File Name")
+        for numb, element in enumerate(list_names_to_print):
+            print("\t", numb+1, end=self.calculate_spaceing(numb))
+            if list_times_to_print:
+                try:
+                    s_time = list_times_to_print[numb]
+                except IndexError:
+                    s_time = 0
+                try:
+                    c_time = element.stat().st_mtime
+                except FileNotFoundError:
+                    c_time = 0
+                colour = Back.GREEN
+                if c_time > s_time:
+                    colour = Back.BLUE
+                elif c_time < s_time:
+                    colour = Back.RED
+                print(f'{colour}{element}')
+                continue
+            print(element) #, datetime.datetime.fromtimestamp(pl.Path(element).stat().st_mtime), sep="\t")
+
+        print(self.divider)
+        print(f"{Back.GREEN}\tGreen:\tUp to date")
+        print(f"{Back.BLUE}\tBlue:\tClient version newer than server version")
+        print(f"{Back.RED}\tRed:\tServer version newer than client version")
+        print(self.divider)
 
     def print_remote_files(self):
         enc_remote_file_list = self.client.servercoms.get_file_list()
@@ -178,7 +206,8 @@ class CLI:
             print("\t(no files on server)")
         else:
             self.dec_remote_file_list = self.client.file_crypt.decrypt_file_list(enc_remote_file_list)
-            self.print_list(self.dec_remote_file_list)
+            file_names_only = [touble[0] for touble in self.dec_remote_file_list]
+            self.print_list(file_names_only)
 
     def print_local_files(self):
         self.local_file_list = self.client.get_local_file_list()
@@ -191,7 +220,7 @@ class CLI:
         local_file_list = self.client.get_local_file_list()
         enc_remote_file_list = self.client.servercoms.get_file_list()
         self.dec_remote_file_list = self.client.file_crypt.decrypt_file_list(enc_remote_file_list)
-        pathlib_remote_file_list = [pl.Path(x) for x in self.dec_remote_file_list]
+        pathlib_remote_file_list = [pl.Path(x[0]) for x in self.dec_remote_file_list]
         files_not_on_server = globals.get_list_difference(local_file_list, pathlib_remote_file_list)
         files_not_on_client = globals.get_list_difference(pathlib_remote_file_list, local_file_list)
         print("Difference:")
@@ -206,6 +235,18 @@ class CLI:
         else:
             print("Files not on server:")
             self.print_list(files_not_on_server)
+
+    def print_sync_status(self):
+        local_file_list = self.client.get_local_file_list()
+        enc_remote_file_list = self.client.servercoms.get_file_list()
+        dec_remote_file_list = self.client.file_crypt.decrypt_file_list(enc_remote_file_list)
+        pathlib_remote_file_list = [pl.Path(x[0]) for x in dec_remote_file_list]
+        files_not_on_server = globals.get_list_difference(local_file_list, pathlib_remote_file_list )
+        l = [x[0] for x in dec_remote_file_list]
+        l.extend([pl.Path(x) for x in files_not_on_server])
+        self.print_list(l, [x[1] for x in dec_remote_file_list])
+
+
 
     def clear_screen(self, print_logo=True):
         if platform.system() == 'Windows':
@@ -230,8 +271,8 @@ Available commands:
     Exit                (e, exit)
                         """
         additional = """
-    Get_file            (gf #, get_file #)    
-    Delete_file         (df #, delete_file #)
+    Get_file            (gf #, get #, get_file #)    
+    Delete_file         (df #, del #, delete_file #)
         
         """
         if self.get_or_delete_avaliable:

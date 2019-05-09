@@ -11,6 +11,10 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from resources import globals
 
 
+class OlderServerFileError(Exception):
+    pass
+
+
 class FileCryptography:
 
     def __init__(self, key):
@@ -27,8 +31,8 @@ class FileCryptography:
         relative_file_path = file_path.relative_to(globals.WORK_DIR)
         enc_file_name = self.encrypt_relative_file_path(relative_file_path, nonce1)
 
-        curr_time = time.time()
-        additional_data = {'t': curr_time, 'n': enc_file_name, 'nonce1': nonce1, 'nonce2': nonce2}
+        file_mtime = file_path.stat().st_mtime  # Time of last modification of the file
+        additional_data = {'t': file_mtime, 'n': enc_file_name, 'nonce1': nonce1, 'nonce2': nonce2}
         additional_data_json = json.dumps(additional_data)
 
         enc_file_path = pl.Path.joinpath(pl.Path(globals.TEMPORARY_FOLDER), enc_file_name)
@@ -61,8 +65,14 @@ class FileCryptography:
             byte_file_name,
             associated_data=None).decode('utf-8')
         dec_file_path = pl.PurePath.joinpath(globals.WORK_DIR, dec_file_name)
+        if dec_file_path.exists():
+            last_mod_time_c = dec_file_path.stat().st_mtime
+            last_mod_time_s = additional_data["t"]
+            if last_mod_time_c > last_mod_time_s:
+                raise OlderServerFileError("Server send old file to replace local version!")
+            # ToDo: check if works!
         additional_data_json = json.dumps(additional_data)
-        dec_file_path.parent.mkdir(parents=True, exist_ok=True)
+        dec_file_path.parent.mkdir(parents=True, exist_ok=True)  # ToDO: Access and Modify data is not true
         with open(file_path, 'rb') as file:
             dec_file_data = self.aesgcm.decrypt(
                 bytes(additional_data['nonce2'], 'utf-8'),
@@ -70,22 +80,26 @@ class FileCryptography:
                 associated_data=bytes(additional_data_json, 'utf-8'))
             with open(dec_file_path, "wb+") as dec_file:
                 dec_file.write(dec_file_data)
+        #  Set access and modify as per additional data:
+        file_last_mod = additional_data["t"]
+        os.utime(str(dec_file_path), (file_last_mod, file_last_mod))
         globals.DOWNLOADED_FILE_QUEUE.append(dec_file_name)
         return dec_file_path
 
-    def decrypt_file_list_extended(self, enc_relative_path_list_with_nonces: list) -> list:
-        file_name_nonce_enc_file_name_triple_list = []
-        for enc_relative_path, nonce in enc_relative_path_list_with_nonces:
+    def decrypt_file_list_extended(self, enc_relative_path_list_with_nonces_and_timestamp: list) -> list:
+        file_name_nonce_enc_file_name_time_stamp_quadruple_list = []
+        for enc_relative_path, nonce, time_stamp in enc_relative_path_list_with_nonces_and_timestamp:
             try:
                 dec_file_name = self.decrypt_relative_file_path(pl.Path(enc_relative_path), nonce)
             except InvalidTag:  # File on server encrypted under another key.
-                continue
-            file_name_nonce_enc_file_name_triple_list.append([pl.Path(str(dec_file_name, 'utf-8')), nonce, enc_relative_path])
-        return file_name_nonce_enc_file_name_triple_list
+                continue  # Todo: Somethings fucky! Should not happen anymore. raise Error ?
+            file_name_nonce_enc_file_name_time_stamp_quadruple_list.append([pl.Path(str(dec_file_name, 'utf-8')), nonce, enc_relative_path, time_stamp])
+        return file_name_nonce_enc_file_name_time_stamp_quadruple_list
 
-    def decrypt_file_list(self, enc_relative_path_list_with_nonces: list) -> list:
-        """Get a list of encrypted file names, decrypt them, make them to paths and return an unencrypted list"""
-        return [lst[0] for lst in self.decrypt_file_list_extended(enc_relative_path_list_with_nonces)]
+    def decrypt_file_list(self, enc_relative_path_list_with_nonces_and_timestamp: list) -> list:
+        """Get a list of encrypted file names and their timestamp,
+         decrypt them, make them to paths and return an unencrypted list"""
+        return [(lst[0], lst[3]) for lst in self.decrypt_file_list_extended(enc_relative_path_list_with_nonces_and_timestamp)]
 
     def encrypt_key(self, key, nonce):
         return self.aesgcm.encrypt(bytes.fromhex(nonce), bytes.fromhex(key), associated_data=None).hex()

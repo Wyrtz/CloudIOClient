@@ -43,6 +43,7 @@ class TestClient(unittest.TestCase):
         sleep(self.sleep_time)
         file_list_enc = self.client.servercoms.get_file_list()
         file_list_dec = self.client.file_crypt.decrypt_file_list(file_list_enc)
+        file_list_dec = [touple[0] for touple in file_list_dec]
         self.assertIn(random_file_path, file_list_dec)
 
     def test_delete_file(self):
@@ -56,6 +57,7 @@ class TestClient(unittest.TestCase):
         self.assertNotIn(random_file_relative_path, self.client.get_local_file_list())
         file_list_enc = self.client.servercoms.get_file_list()
         file_list_dec = self.client.file_crypt.decrypt_file_list(file_list_enc)
+        file_list_dec = [touple[0] for touple in file_list_dec]
         self.assertNotIn(random_file_relative_path, file_list_dec)
 
     def test_retrieve_file_from_server(self):
@@ -67,6 +69,7 @@ class TestClient(unittest.TestCase):
         sleep(self.sleep_time)
         file_list_enc = self.client.servercoms.get_file_list()
         file_list_dec = self.client.file_crypt.decrypt_file_list(file_list_enc)
+        file_list_dec = [touple[0] for touple in file_list_dec]
         self.assertIn(random_file_relative_path, file_list_dec)
         # Delete the file locally, "close client" such that the server is not asked to also delete (archive)
         self.client.close_observers()
