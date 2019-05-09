@@ -6,7 +6,7 @@ from time import sleep
 from hashlib import sha3_224
 
 from ServerComs import ServComs
-from security import keyderivation
+from security import keyderivation, secretsharing
 from security.filecryptography import FileCryptography
 from file_event_handler import MyHandler
 from watchdog.observers import Observer
@@ -130,3 +130,11 @@ class Client:
         for observer in self.observers_list:
             observer.join()
         return
+
+    def backup_key(self, password, required_share_amount_to_recover: int, share_amount: int) -> list:
+        key = self.kd.derive_key(password)
+        return secretsharing.split_secret(bytes.fromhex(key), required_share_amount_to_recover - 1, share_amount)
+
+    def replace_key_from_backup(self, shares, new_pw):
+        key = secretsharing.recover_secret(shares)
+        self.file_crypt = self.kd.replace_pw_from_key(key.hex(), new_pw)

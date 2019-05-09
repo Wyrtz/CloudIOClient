@@ -84,12 +84,12 @@ class TestServercoms(unittest.TestCase):
                             "User 3 has send no files; should have no files.")
             self.assertTrue(len(files_user_1) == 1 and len(files_user_2) == 1,
                             "User 1 & 2 has send 1 file; should have 1 file.")
-            for encfilename, nonce in files_user_1:  #
-                self.assertTrue([encfilename, nonce] in files_user_1)
-                self.assertTrue([encfilename, nonce] not in files_user_2)
-            for encfilename, nonce in files_user_2:
-                self.assertTrue([encfilename, nonce] in files_user_2)
-                self.assertTrue([encfilename, nonce] not in files_user_1)
+            for encfilename, nonce, ts in files_user_1:  #
+                self.assertTrue([encfilename, nonce] in [[x[0], x[1]] for x in files_user_1])
+                self.assertTrue([encfilename, nonce] not in [[x[0], x[1]] for x in files_user_2])
+            for encfilename, nonce, ts in files_user_2:
+                self.assertTrue([encfilename, nonce] in [[x[0], x[1]] for x in files_user_2])
+                self.assertTrue([encfilename, nonce] not in [[x[0], x[1]] for x in files_user_1])
             user1.get_file(files_user_1[0][0])
             user2.get_file(files_user_2[0][0])
             self.assertRaises(FileNotFoundError, user2.get_file, files_user_1[0][0])

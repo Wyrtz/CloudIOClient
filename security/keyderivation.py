@@ -155,6 +155,21 @@ class KeyDerivation:
         return len(self.get_hashes_of_keys()) != 0
         # Only way we can know if we have a pw is if we have something to compare it with.
 
+    def replace_pw_from_key(self, key, new_pw):
+        if not self.has_password():
+            raise IllegalMethodUsageException()
+        if len(new_pw) < 12:
+            raise BadPasswordSelected
+        if not self.key_verifies(key):
+            raise BadKeyException
+        new_key = self.derive_key(new_pw, False)
+        file_crypt = filecryptography.FileCryptography(new_key)
+        nonce = globals.get_nonce()
+        enc_old_key = file_crypt.encrypt_key(key, nonce)
+        self.append_enc_key_ct_to_enc_keys_file(enc_old_key, nonce)
+        self.store_hash_of_key(new_key)
+        return file_crypt
+
 
 class BadKeyException(Exception):
     pass

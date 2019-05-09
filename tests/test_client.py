@@ -114,6 +114,15 @@ class TestClient(unittest.TestCase):
             remote_file_data = file.read()
         self.assertEqual(local_file_data, remote_file_data, "Files not equal!")
 
+    def test_can_backup_key_then_replace(self):
+        shares = self.client.backup_key(self.pw, 10, 20)
+        self.assertTrue(len(shares) == 20)
+        self.assertRaises(AssertionError, self.client.replace_key_from_backup, shares[:9], 'wertyuisdfgh')
+        self.assertRaises(AssertionError, self.client.replace_key_from_backup, shares[5:9], 'wertyuisdfgh')
+        self.assertRaises(AssertionError, self.client.replace_key_from_backup, shares[5:14], 'wertyuisdfgh')
+        new_pw = 'wertyuiosdfghj'
+        self.client.replace_key_from_backup(shares[3:15], new_pw)
+        self.client.kd.derive_key(new_pw)
 
     def create_random_file(self, path=globals.FILE_FOLDER):
         """Create a random file in the file folder, give back the path"""

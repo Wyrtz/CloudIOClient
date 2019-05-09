@@ -101,6 +101,9 @@ class Polynomial:
         assert degree < 128, "Degree can at most be 127"
         self.coefficients = [FInt(secret, prime)] + [FInt(int.from_bytes(os.urandom(32), byteorder) % prime,
                                                           prime) for _ in range(degree)]
+        while self.coefficients.__contains__(FInt(0, prime)):  # It would be rather unfortunate if all coefs. were zero.
+            index_of_zero = self.coefficients.index(FInt(0, prime))  # TODO: bad to enforce no coefs. are zero?
+            self.coefficients[index_of_zero] = FInt(int.from_bytes(os.urandom(32), byteorder) % prime, prime)
 
     def evaluate_point(self, x_val: int) -> (int, int):
         y_val = FInt(0, self.prime)
@@ -115,7 +118,9 @@ class Polynomial:
         return s
 
 
-def recover_secret(t, points, prime=the_prime) -> bytes:
+def recover_secret(points, prime=the_prime) -> bytes:
+    t = points[0][2]
+    for point in points: assert point[2] == t
     assert len(points) > t
     k = t + 1
 
@@ -138,4 +143,4 @@ def recover_secret(t, points, prime=the_prime) -> bytes:
 def split_secret(secret: bytes, t: int, n: int) -> list:
     assert len(secret) == 32, "Secret should be 256 long."
     p = Polynomial(secret, t)
-    return [p.evaluate_point(idx) for idx in range(1, n+1)]
+    return [(point[0], point[1], t) for point in [p.evaluate_point(idx) for idx in range(1, n+1)]]
