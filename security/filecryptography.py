@@ -64,7 +64,7 @@ class FileCryptography:
             bytes(additional_data['nonce1'], 'utf-8'),
             byte_file_name,
             associated_data=None).decode('utf-8')
-        dec_file_path = pl.PurePath.joinpath(globals.WORK_DIR, dec_file_name)
+        dec_file_path = pl.Path.joinpath(globals.WORK_DIR, dec_file_name)
         if dec_file_path.exists():
             last_mod_time_c = dec_file_path.stat().st_mtime
             last_mod_time_s = additional_data["t"]
