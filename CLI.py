@@ -14,8 +14,10 @@ from resources import globals
 import pathlib as pl
 
 from client import Client
+import client
 from security import keyderivation
 from security.keyderivation import BadKeyException, BadPasswordSelected
+from security.secretsharing import FInt
 
 
 class CLI:
@@ -44,6 +46,60 @@ class CLI:
                 server_location = "127.0.0.1:443"
             else:
                 server_location = globals.SERVER_LOCATION
+            init_cmd = input("Want to [login] or [replace_password_using_shares]?")
+            if init_cmd != 'login' and init_cmd != 'replace_password_using_shares':
+                print("Sorry, I did not understand this.")
+                return
+            elif init_cmd == 'replace_password_using_shares':
+                shares_input = []
+                amount_needed = -1
+                while len(shares_input) != amount_needed:
+                    if amount_needed != -1:
+                        print("Expecting " + str(len(shares_input) - amount_needed) + " more shares.")
+                    x = input("Input the first value of a share. (or 'exit' to exit)\n")
+                    if x == 'exit':
+                        return
+                    y = input("Input the second value of THE SAME share. (or 'exit' to exit)\n")
+                    if y == 'exit':
+                        return
+                    t = input("Input the third value of THE SAME share. (or 'exit' to exit)\n")
+                    if t == 'exit':
+                        return
+                    try:
+                        x = int(x)
+                        y = FInt(int(y))
+                        t = int(t)
+                    except ValueError:
+                        print("Could not interpret the share as a share. Try inputting it again:")
+                        continue
+                    if amount_needed == -1:
+                        amount_needed = t + 1
+                    elif t != amount_needed:
+                        print("The share input does not match the other shares. Try inputting again:")
+                        continue
+                    if shares_input.__contains__([x, y, t]):
+                        continue
+                    else:
+                        shares_input = shares_input + [[x, y, t]]
+                has_new_pw = False
+                while not has_new_pw:
+                    username = input("Select a username. (Can pick new or the same)")
+                    new_pw = getpass("Input new password.")
+                    new_pw_ = getpass("Repeat new password.")
+                    if new_pw == new_pw_:
+                        try:
+                            client.replace_key_from_backup(shares_input, username, new_pw)
+                        except BadKeyException:
+                            print("Failed to recover from the shares. Did you input them right? Exiting...")
+                            sleep(1)
+                            return
+                        except BadPasswordSelected:
+                            print("Invalid password selected. Try another one.")
+                            continue
+                        #  No exception. Password has been replaced with new.
+                        return
+                    else:
+                        print("Passwords didn't match. Try again.")
             if pl.Path(globals.KEY_HASHES).exists():
                 username = input("Username:")
                 password = getpass("Password:")
@@ -70,7 +126,6 @@ class CLI:
             except BadKeyException:
                 self.clear_screen()
                 print(f"{Fore.RED}Wrong username or password")
-                # TODO: Forgot password? Do you have shares? Input them now:...
                 sleep(1)
                 self.start_user_interface()
                 return
@@ -167,11 +222,18 @@ class CLI:
                 except ValueError:
                     print("Sorry, can't interpret that as an int. Exiting backup.")
                     continue
+                if total < 1:
+                    print("That's not a valid amount of total shares. Should be > 0. Exiting backup.")
+                    continue
                 to_recover_from = input("How many pieces should be necessary to recover?(int)")
                 try:
                     to_recover_from = int(to_recover_from)
                 except ValueError:
                     print("Sorry, can't interpret that as an int. Exiting backup.")
+                    continue
+                if to_recover_from < 1 or to_recover_from > total:
+                    print("That's not a valid amount of shares to recover from.")
+                    print("Should be > 0 and < total amount of shares. Exiting backup.")
                     continue
                 password = getpass("Type in your password to confirm.")
                 shares = self.client.backup_key(password, to_recover_from, total)
@@ -179,7 +241,7 @@ class CLI:
                 for share in shares:
                     print(share)
                 print("When you have written these down or distributed them press enter.")
-                input('Remember; these should only be parties you can trust not to collaborate against you.')
+                input('Remember; these should only be given to parties you can trust not to collaborate against you.')
             print()
             print(self.divider)
             print(self.get_help())
@@ -358,6 +420,8 @@ Available commands:
     Sync status         (ss, sync_status)
     Replace password    (re_pw, replace_password)
     Create shared folder(csf, create_shared_folder)
+    Backup password us- (backup_password)
+        ing shares.
     Exit                (e, exit)
                         """
         additional = """

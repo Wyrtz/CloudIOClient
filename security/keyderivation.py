@@ -157,8 +157,6 @@ class KeyDerivation:
         # Only way we can know if we have a pw is if we have something to compare it with.
 
     def replace_pw_from_key(self, key, new_pw):
-        if not self.has_password():
-            raise IllegalMethodUsageException()
         if len(new_pw) < 12:
             raise BadPasswordSelected
         if not self.key_verifies(key):
