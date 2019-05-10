@@ -5,7 +5,7 @@ signed = 'False'
 
 
 class FInt:
-    def __init__(self, value, prime):
+    def __init__(self, value, prime=the_prime):
         self.value = value % prime
         self.prime = prime
 
@@ -82,13 +82,13 @@ class FInt:
         return FInt(pow(self.value, power.value, self.prime), self.prime)
 
     def __str__(self):
-        return "F" + str(self.value)
+        return str(self.value)
 
     def __neg__(self):
         return FInt(-self.value % self.prime, self.prime)
 
     def __repr__(self):
-        return "F" + str(self.value)
+        return str(self.value)
 
 
 class Polynomial:

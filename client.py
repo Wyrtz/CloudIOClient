@@ -7,7 +7,7 @@ from watchdog.observers import Observer
 from ServerComs import ServComs
 from file_event_handler import MyHandler
 from resources import globals
-from security import keyderivation, secretsharing
+from security import keyderivation, secretsharing, filecryptography
 from security.filecryptography import FileCryptography
 
 
@@ -143,6 +143,7 @@ class Client:
         key = self.kd.derive_key(password)
         return secretsharing.split_secret(bytes.fromhex(key), required_share_amount_to_recover - 1, share_amount)
 
-    def replace_key_from_backup(self, shares, new_pw):
-        key = secretsharing.recover_secret(shares)
-        self.file_crypt = self.kd.replace_pw_from_key(key.hex(), new_pw)
+
+def replace_key_from_backup(shares, username, new_pw):
+    key = secretsharing.recover_secret(shares)
+    keyderivation.KeyDerivation(username).replace_pw_from_key(key.hex(), new_pw)

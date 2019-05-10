@@ -4,6 +4,7 @@ from time import sleep
 
 import requests
 
+import client
 from resources import globals
 from client import Client
 import os
@@ -117,11 +118,11 @@ class TestClient(unittest.TestCase):
     def test_can_backup_key_then_replace(self):
         shares = self.client.backup_key(self.pw, 10, 20)
         self.assertTrue(len(shares) == 20)
-        self.assertRaises(AssertionError, self.client.replace_key_from_backup, shares[:9], 'wertyuisdfgh')
-        self.assertRaises(AssertionError, self.client.replace_key_from_backup, shares[5:9], 'wertyuisdfgh')
-        self.assertRaises(AssertionError, self.client.replace_key_from_backup, shares[5:14], 'wertyuisdfgh')
+        self.assertRaises(AssertionError, client.replace_key_from_backup, shares[:9], self.username, 'wertyuisdfgh')
+        self.assertRaises(AssertionError, client.replace_key_from_backup, shares[5:9], self.username, 'wertyuisdfgh')
+        self.assertRaises(AssertionError, client.replace_key_from_backup, shares[5:14], self.username, 'wertyuisdfgh')
         new_pw = 'wertyuiosdfghj'
-        self.client.replace_key_from_backup(shares[3:15], new_pw)
+        client.replace_key_from_backup(shares[3:15], self.username, new_pw)
         self.client.kd.derive_key(new_pw)
 
     def create_random_file(self, path=globals.FILE_FOLDER):
