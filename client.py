@@ -139,6 +139,11 @@ class Client:
         key = self.kd.derive_key(password)
         return secretsharing.split_secret(key, required_share_amount_to_recover - 1, share_amount)
 
+    def add_key_from_shares(self, shares: list):
+        key = secretsharing.recover_secret(shares)
+        # Todo: encrypt this key under our existing key and save it
+        # Todo: How to map ? UserID -> key ? Folder -> key ? third?
+
 
 def replace_key_from_backup(shares, username, new_pw):
     key = secretsharing.recover_secret(shares)

@@ -143,60 +143,34 @@ class CLI:
                 secret = self.client.create_shared_folder(relative_folder_path, key)
                 print(secret[0])
 
+            elif command == "asf" or command == "add_shared_folder":
+                self.add_shared_folder()
             elif command == 'exit' or command == 'e':
                 raise KeyboardInterrupt
             elif command == 'replace_password' or command == "re_pw":
-                self.clear_screen()
-                print("Initiated password replacement.")
-                old_pw = getpass("Type old password:")
-                new_password = getpass("Type new password:")
-                new_password_ = getpass("Repeat new password:")
-                if new_password != new_password_:
-                    self.clear_screen()
-                    print("New password doens't match.")
-                try:
-                    self.client.kd.replace_pw(old_pw=old_pw, new_pw=new_password)
-                    input("Replaced password successfully. Press enter to continue.")
-                    self.clear_screen()
-                except (BadKeyException, BadPasswordSelected):
-                    input("Failed to replace password. Press enter to continue.")
-                    self.clear_screen()
+                self.replace_password()
             elif command == 'backup_password':
-                r1 = input("You are about to backup your password. Are you sure you want to do this?(y/n)")
-                if r1 == 'n':
-                    continue
-                elif r1 != 'y':
-                    print('Sorry, I could not interpret that input.')
-                    continue
-                total = input("How many pieces do you want in total?(int)")
-                try:
-                    total = int(total)
-                except ValueError:
-                    print("Sorry, can't interpret that as an int. Exiting backup.")
-                    continue
-                if total < 1:
-                    print("That's not a valid amount of total shares. Should be > 0. Exiting backup.")
-                    continue
-                to_recover_from = input("How many pieces should be necessary to recover?(int)")
-                try:
-                    to_recover_from = int(to_recover_from)
-                except ValueError:
-                    print("Sorry, can't interpret that as an int. Exiting backup.")
-                    continue
-                if to_recover_from < 1 or to_recover_from > total:
-                    print("That's not a valid amount of shares to recover from.")
-                    print("Should be > 0 and < total amount of shares. Exiting backup.")
-                    continue
-                password = getpass("Type in your password to confirm.")
-                shares = self.client.backup_key(password, to_recover_from, total)
-                print("These are your shares:")
-                for share in shares:
-                    print(share)
-                print("When you have written these down or distributed them press enter.")
-                input('Remember; these should only be given to parties you can trust not to collaborate against you.')
+                self.backup_password()
             print()
             print(self.divider)
             print(self.get_help())
+
+    def replace_password(self):
+        self.clear_screen()
+        print("Initiated password replacement.")
+        old_pw = getpass("Type old password:")
+        new_password = getpass("Type new password:")
+        new_password_ = getpass("Repeat new password:")
+        if new_password != new_password_:
+            self.clear_screen()
+            print("New password doens't match.")
+        try:
+            self.client.kd.replace_pw(old_pw=old_pw, new_pw=new_password)
+            input("Replaced password successfully. Press enter to continue.")
+            self.clear_screen()
+        except (BadKeyException, BadPasswordSelected):
+            input("Failed to replace password. Press enter to continue.")
+            self.clear_screen()
 
     def interact_with_server(self, commands, command):
         error_message = f"{Fore.RED}Provide what file (number) you want"
@@ -232,6 +206,63 @@ class CLI:
             print(requested_file)
             self.client.delete_remote_file(requested_file)  # ToDO: not done! If file is on server, not on client, fucks up (what file to ask for del ?)
             return True
+
+    def replace_pw_using_shares(self):
+        shares_input = self.get_shares_from_user()
+        has_new_pw = False
+        while not has_new_pw:
+            username = input("Select a username. (Can pick new or the same)")
+            new_pw = getpass("Input new password.")
+            new_pw_ = getpass("Repeat new password.")
+            if new_pw == new_pw_:
+                try:
+                    client.replace_key_from_backup(shares_input, username, new_pw)
+                except BadKeyException:
+                    print("Failed to recover from the shares. Did you input them right? Exiting...")
+                    sleep(1)
+                    return
+                except BadPasswordSelected:
+                    print("Invalid password selected. Try another one.")
+                    continue
+                #  No exception. Password has been replaced with new.
+                return
+            else:
+                print("Passwords didn't match. Try again.")
+
+    def get_shares_from_user(self) -> list:
+        shares_input = []
+        amount_needed = -1
+        while len(shares_input) != amount_needed:
+            if amount_needed != -1:
+                print("Expecting " + str(amount_needed - len(shares_input)) + " more shares.")
+            x = input("Input the first value of a share. (or 'exit' to exit)\n")
+            if x == 'exit':
+                raise KeyboardInterrupt
+            y = input("Input the second value of THE SAME share. (or 'exit' to exit)\n")
+            if y == 'exit':
+                raise KeyboardInterrupt
+            t = input("Input the third value of THE SAME share. (or 'exit' to exit)\n")
+            if t == 'exit':
+                raise KeyboardInterrupt
+            try:
+                x = int(x)
+                y = FInt(int(y))
+                t = int(t)
+            except ValueError:
+                print("Could not interpret the share as a share. Try inputting it again:")
+                continue
+            if amount_needed == -1:
+                amount_needed = t + 1
+            elif t + 1 != amount_needed:
+                print("The share input does not match the other shares. Try inputting again:")
+                continue
+            if shares_input.__contains__([x, y, t]):
+                continue
+            else:
+                shares_input = shares_input + [[x, y, t]]
+
+        return shares_input
+
 
     def print_remote_files(self):
         enc_remote_file_list = self.client.servercoms.get_file_list()
@@ -285,6 +316,43 @@ class CLI:
         key = kd.derive_key(pw, False)
         return key
 
+    def add_shared_folder(self):
+        shares = self.get_shares_from_user()
+        self.client.add_key_from_shares(shares)
+
+    def backup_password(self):
+        r1 = input("You are about to backup your password. Are you sure you want to do this?(y/n)")
+        if r1 == 'n':
+            return
+        elif r1 != 'y':
+            print('Sorry, I could not interpret that input.')
+            return
+        total = input("How many pieces do you want in total?(int)")
+        try:
+            total = int(total)
+        except ValueError:
+            print("Sorry, can't interpret that as an int. Exiting backup.")
+            return
+        if total < 1:
+            print("That's not a valid amount of total shares. Should be > 0. Exiting backup.")
+            return
+        to_recover_from = input("How many pieces should be necessary to recover?(int)")
+        try:
+            to_recover_from = int(to_recover_from)
+        except ValueError:
+            print("Sorry, can't interpret that as an int. Exiting backup.")
+            return
+        if to_recover_from < 1 or to_recover_from > total:
+            print("That's not a valid amount of shares to recover from.")
+            print("Should be > 0 and < total amount of shares. Exiting backup.")
+            return
+        password = getpass("Type in your password to confirm.")
+        shares = self.client.backup_key(password, to_recover_from, total)
+        print("These are your shares:")
+        for share in shares:
+            print(share)
+        print("When you have written these down or distributed them press enter.")
+        input('Remember; these should only be given to parties you can trust not to collaborate against you.')
 
     def generate_sync_dict(self):
         """Generates a dictionary with key:files value:(client_time, server_time)
@@ -341,9 +409,6 @@ class CLI:
         print(f"{Back.RED}\tRed:\tServer version newer than client version")
         print(self.divider)
 
-
-
-
     def clear_screen(self, print_logo=True):
         """Clears the terminal no matter the OS"""
         if platform.system() == 'Windows':
@@ -372,6 +437,7 @@ Available commands:
     Sync status         (ss, sync_status)
     Replace password    (re_pw, replace_password)
     Create shared folder(csf, create_shared_folder)
+    Add shared folder   (asf, add_shared_folder)
     Backup password us- (backup_password)
         ing shares.
     Exit                (e, exit)
@@ -384,57 +450,6 @@ Available commands:
         if self.get_or_delete_avaliable:
             help += additional
         return help
-
-    def replace_pw_using_shares(self):
-        shares_input = []
-        amount_needed = -1
-        while len(shares_input) != amount_needed:
-            if amount_needed != -1:
-                print("Expecting " + str(amount_needed - len(shares_input)) + " more shares.")
-            x = input("Input the first value of a share. (or 'exit' to exit)\n")
-            if x == 'exit':
-                return
-            y = input("Input the second value of THE SAME share. (or 'exit' to exit)\n")
-            if y == 'exit':
-                return
-            t = input("Input the third value of THE SAME share. (or 'exit' to exit)\n")
-            if t == 'exit':
-                return
-            try:
-                x = int(x)
-                y = FInt(int(y))
-                t = int(t)
-            except ValueError:
-                print("Could not interpret the share as a share. Try inputting it again:")
-                continue
-            if amount_needed == -1:
-                amount_needed = t + 1
-            elif t+1 != amount_needed:
-                print("The share input does not match the other shares. Try inputting again:")
-                continue
-            if shares_input.__contains__([x, y, t]):
-                continue
-            else:
-                shares_input = shares_input + [[x, y, t]]
-        has_new_pw = False
-        while not has_new_pw:
-            username = input("Select a username. (Can pick new or the same)")
-            new_pw = getpass("Input new password.")
-            new_pw_ = getpass("Repeat new password.")
-            if new_pw == new_pw_:
-                try:
-                    client.replace_key_from_backup(shares_input, username, new_pw)
-                except BadKeyException:
-                    print("Failed to recover from the shares. Did you input them right? Exiting...")
-                    sleep(1)
-                    return
-                except BadPasswordSelected:
-                    print("Invalid password selected. Try another one.")
-                    continue
-                #  No exception. Password has been replaced with new.
-                return
-            else:
-                print("Passwords didn't match. Try again.")
 
 
 if __name__ == "__main__":
