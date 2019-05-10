@@ -141,6 +141,6 @@ def recover_secret(points, prime=the_prime) -> bytes:
 
 
 def split_secret(secret: bytes, t: int, n: int) -> list:
-    assert len(secret) == 32, "Secret should be 256 long."
+    assert len(secret) == 32, f"Secret should be 256 bits long but was {len(secret)}"
     p = Polynomial(secret, t)
     return [(point[0], point[1], t) for point in [p.evaluate_point(idx) for idx in range(1, n+1)]]

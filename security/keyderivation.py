@@ -26,7 +26,7 @@ class KeyDerivation:
                       p=32,  # number of iterations
                       backend=default_backend())
 
-    def derive_key(self, pw, verify=True):  # Assume at first the PW is correct, then check if key is correct.
+    def derive_key(self, pw, verify=True) -> bytes:  # Assume at first the PW is correct, then check if key is correct.
         key = self.derive_key_unverified(pw)
         if verify and not self.key_verifies(key):
             raise BadKeyException
@@ -38,28 +38,28 @@ class KeyDerivation:
             return False
         return hashes[-1] == self.hash_key(key)
 
-    def hash_key(self, key):
+    def hash_key(self, key: bytes) -> bytes:
         hasher = sha3_512()
         hasher.update(bytes("hash key salt", 'utf-8'))  # Its another salt. TODO: random salt? Perhaps username?
-        hasher.update(bytes.fromhex(key))
-        return hasher.digest().hex()
+        hasher.update(key)
+        return hasher.digest()
 
     def derive_new_key(self, pw):
         key = self.derive_key_unverified(pw)
         self.store_hash_of_key(key)
         return key
 
-    def derive_key_unverified(self, pw):
+    def derive_key_unverified(self, pw) -> bytes:
         if type(pw) is str:
             pw = bytes(pw, 'utf-8')
         key = self.kdf().derive(pw)
-        return key.hex()
+        return key
 
-    def store_hash_of_key(self, key):  # Store hash to later compare with another key.
+    def store_hash_of_key(self, key: bytes):  # Store hash to later compare with another key.
         self.key_hashes_lock.acquire()
         hash_of_key = self.hash_key(key)  # TODO: hash many iterations?
         with open(globals.KEY_HASHES, 'a') as file:
-            file.write(hash_of_key + "\n")
+            file.write(hash_of_key.hex() + "\n")
         self.key_hashes_lock.release()
 
     def replace_pw(self, old_pw, new_pw):  # It's called future security!
@@ -85,17 +85,17 @@ class KeyDerivation:
         file_crypt = filecryptography.FileCryptography(key)
         return file_crypt
 
-    def append_enc_key_ct_to_enc_keys_file(self, key_ct, nonce):
+    def append_enc_key_ct_to_enc_keys_file(self, key_ct: bytes, nonce: str):
         self.enc_keys_file_lock.acquire()
         if not pl.Path(globals.ENC_OLD_KEYS).exists():
             with open(globals.ENC_OLD_KEYS, 'w') as file:
-                file.write(key_ct + " & " + nonce + "\n")
+                file.write(key_ct.hex() + " & " + nonce + "\n")
         else:
             with open(globals.ENC_OLD_KEYS, 'a') as file:
-                file.write(key_ct + " & " + nonce + "\n")
+                file.write(key_ct.hex() + " & " + nonce + "\n")
         self.enc_keys_file_lock.release()
 
-    def retrieve_keys(self, current_key):
+    def retrieve_keys(self, current_key: bytes):
         """
         To retrieve old keys we need their
         - hashes to verify,
@@ -138,7 +138,7 @@ class KeyDerivation:
             if s == "":  # There will be an empty entry at the end - Just ignore it.
                 continue
             old_enc_keys = [s.rsplit(" & ")] + old_enc_keys  # first in, last out; this is the order we need to dec.
-        return old_enc_keys
+        return [[bytes.fromhex(element[0]), element[1]] for element in old_enc_keys]
 
     def get_hashes_of_keys(self):
         self.key_hashes_lock.acquire()
@@ -149,7 +149,8 @@ class KeyDerivation:
             self.key_hashes_lock.release()
             return []
         self.key_hashes_lock.release()
-        return hashes_str.rsplit('\n')[:-1]  # The last item is "".
+        byte_keys = [bytes.fromhex(x) for x in hashes_str.rsplit('\n')]
+        return byte_keys[:-1]  # The last item is "".
 
     def has_password(self):
         return len(self.get_hashes_of_keys()) != 0

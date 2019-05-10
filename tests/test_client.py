@@ -7,6 +7,8 @@ import requests
 from resources import globals
 from client import Client
 import os
+
+from security.filecryptography import FileCryptography
 from tests import setup_test_environment as ste
 from security import keyderivation
 
@@ -20,7 +22,7 @@ class TestClient(unittest.TestCase):
         self.serverIp = 'wyrnas.myqnapcloud.com:8001' #'127.0.0.1:443'
         self.sleep_time = 1
         self.random_files_list = []
-        self.username = "abecattemattemad"
+        self.username = "abecattematteman"
         self.pw = '1234567890101112'
         self.kd = keyderivation.KeyDerivation(self.username)
         self.ste = ste.global_test_configer(self.kd)
@@ -123,6 +125,30 @@ class TestClient(unittest.TestCase):
         new_pw = 'wertyuiosdfghj'
         self.client.replace_key_from_backup(shares[3:15], new_pw)
         self.client.kd.derive_key(new_pw)
+
+    # def test_get_file_crypt(self):
+    #     # Create 3 file_crypt from 3 keys:
+    #     user_1 = "qwerty"
+    #     user_2 = "asdfgh"
+    #     user_3 = "zxcvbn"
+    #     pw_1 = "qwertyuiiopå¨"
+    #     pw_2 = "asdfghjklæø*"
+    #     pw_3 = "<>zxcvbnm,.-"
+    #     kd1 = keyderivation.KeyDerivation(user_1)
+    #     key1 = kd1.derive_key(pw_1)
+    #     file_crypt_1 = FileCryptography(key1)
+    #     kd2 = keyderivation.KeyDerivation(user_2)
+    #     key2 = kd1.derive_key(pw_2)
+    #     file_crypt_2 = FileCryptography(key2)
+    #     kd3 = keyderivation.KeyDerivation(user_3)
+    #     key3 = kd1.derive_key(pw_3)
+    #     file_crypt_3 = FileCryptography(key3)
+    #     defualt_file_crypt= self.client.file_crypt
+    #     p1 = pl.Path(cw)
+    #     p2
+    #     p3
+    #     self.client.file_crypt_dict[]
+
 
     def create_random_file(self, path=globals.FILE_FOLDER):
         """Create a random file in the file folder, give back the path"""

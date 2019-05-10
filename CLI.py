@@ -1,5 +1,6 @@
 import os
 import platform
+import secrets
 from getpass import getpass
 from time import sleep
 
@@ -125,6 +126,16 @@ class CLI:
                 self.get_or_delete_avaliable = True
                 sync_dict = self.generate_sync_dict()
                 self.print_sync_dict(sync_dict)
+            elif command == "csf" or command == "create_shared_folder":
+                folder_name = input("Name of shared folder:\n") # ToDo: check if legal folder name
+                relative_folder_path = pl.Path.joinpath(globals.FILE_FOLDER, folder_name)
+                if relative_folder_path.exists():
+                    print("Folder already exists!")
+                    continue
+                key = self.generate_key_for_folder_shareing(relative_folder_path)
+                secret = self.client.create_shared_folder(relative_folder_path, key)
+                print(secret[0])
+
             elif command == 'exit' or command == 'e':
                 raise KeyboardInterrupt
             elif command == 'replace_password' or command == "re_pw":
@@ -205,7 +216,7 @@ class CLI:
                     return True
             print("Deleting file...")
             print(requested_file)
-            self.client.delete_remote_file(requested_file)
+            self.client.delete_remote_file(requested_file)  # ToDO: not done! If file is on server, not on client, fucks up (what file to ask for del ?)
             return True
 
     def print_remote_files(self):
@@ -253,6 +264,13 @@ class CLI:
         for numb, element in enumerate(list_names_to_print):
             print("\t", numb + 1, end=self.calculate_spacing(numb))
             print(element)
+
+    def generate_key_for_folder_shareing(self, relative_folder_path):
+        pw = secrets.token_bytes(32)  # 32 bytes long password
+        kd = keyderivation.KeyDerivation(str(relative_folder_path))
+        key = kd.derive_key(pw, False)
+        return key
+
 
     def generate_sync_dict(self):
         """Generates a dictionary with key:files value:(client_time, server_time)
@@ -338,7 +356,8 @@ Available commands:
     Remote_files        (rf, remote_files)
     Diff_local/remote   (diff, d)
     Sync status         (ss, sync_status)
-    Replace password    (replace pw, replace password)
+    Replace password    (re_pw, replace_password)
+    Create shared folder(csf, create_shared_folder)
     Exit                (e, exit)
                         """
         additional = """

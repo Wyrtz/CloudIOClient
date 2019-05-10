@@ -56,8 +56,8 @@ class TestKeyDerivation(unittest.TestCase):
         self.assertFalse(self.kd.key_verifies(key1), "Key shouldn't validate.")
 
     def test_can_replace_pw(self):
-        pw_1 = '1df234512wedf'
-        pw_2 = 'abcde123ewrgf'
+        pw_1 = b'1df234512wedf'
+        pw_2 = b'abcde123ewrgf'
         self.kd.select_first_pw(pw_1)
         key1 = self.kd.derive_key(pw_1)
         self.kd.replace_pw(pw_1, pw_2)
@@ -65,29 +65,29 @@ class TestKeyDerivation(unittest.TestCase):
         self.assertTrue(key1 != key2)
 
     def test_cannot_replace_pw_with_wrong_pw(self):
-        pw_1 = '12345jy5htgrwe'
-        pw_2 = 'abcdeht4rwgff'
-        pw_3 = 'asdfg432refwsd'
+        pw_1 = b'12345jy5htgrwe'
+        pw_2 = b'abcdeht4rwgff'
+        pw_3 = b'asdfg432refwsd'
         self.kd.select_first_pw(pw_1)
         key1 = self.kd.derive_key(pw_1)
         self.assertRaises(BadKeyException, self.kd.replace_pw, pw_3, pw_2)
 
     def test_cannot_select_first_pw_twice(self):
-        pw_1 = '12345132werfd'
-        pw_2 = 'abcde12q3ewrfdg'
+        pw_1 = b'12345132werfd'
+        pw_2 = b'abcde12q3ewrfdg'
         self.kd.select_first_pw(pw_1)
         self.assertRaises(IllegalMethodUsageException,
                           self.kd.select_first_pw, pw_2)
 
     def test_cannot_select_first_pw_twice_not_even_the_same(self):
-        pw_1 = '1234512q3ewrfd'
+        pw_1 = b'1234512q3ewrfd'
         self.kd.select_first_pw(pw_1)
         self.assertRaises(IllegalMethodUsageException,
                           self.kd.select_first_pw, pw_1)
 
     def test_can_recover_key_replaced_once(self):
-        pw_1 = '123456789011'
-        pw_2 = 'abcdewertyuier'
+        pw_1 = b'123456789011'
+        pw_2 = b'abcdewertyuier'
         self.kd.select_first_pw(pw_1)
         key1 = self.kd.derive_key(pw_1)
         self.kd.replace_pw(pw_1, pw_2)
@@ -98,10 +98,10 @@ class TestKeyDerivation(unittest.TestCase):
         self.assertTrue(keys[1] == key1, "The second key should be the old key.")
 
     def test_can_recover_key_replaced_thrice(self):
-        pw_1 = '1234545678ihgv'
-        pw_2 = 'abcdse5dtrguhe'
-        pw_3 = '123a23werdfbcdrguh'
-        pw_4 = '456defdryfguhi'
+        pw_1 = b'1234545678ihgv'
+        pw_2 = b'abcdse5dtrguhe'
+        pw_3 = b'123a23werdfbcdrguh'
+        pw_4 = b'456defdryfguhi'
         self.kd.select_first_pw(pw_1)
         key1 = self.kd.derive_key(pw_1)
         self.kd.replace_pw(pw_1, pw_2)

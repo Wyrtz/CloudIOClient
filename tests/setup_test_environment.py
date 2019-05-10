@@ -29,7 +29,7 @@ class global_test_configer:
     def recover_key_hashes(self):
         hashes_str = ""
         for key_hash in self.key_hashes:
-            hashes_str += key_hash + "\n"
+            hashes_str += key_hash.hex() + "\n"
         with open(globals.KEY_HASHES, 'w') as file:
             file.write(hashes_str)
 

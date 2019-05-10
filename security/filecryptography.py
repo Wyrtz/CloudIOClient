@@ -17,8 +17,8 @@ class OlderServerFileError(Exception):
 
 class FileCryptography:
 
-    def __init__(self, key):
-        self.aesgcm = AESGCM(key=bytes.fromhex(key))
+    def __init__(self, key: bytes):
+        self.aesgcm = AESGCM(key=key)
 
     def encrypt_relative_file_path(self, relative_file_path, nonce):
         return self.aesgcm.encrypt(
@@ -72,7 +72,7 @@ class FileCryptography:
                 raise OlderServerFileError("Server send old file to replace local version!")
             # ToDo: check if works!
         additional_data_json = json.dumps(additional_data)
-        dec_file_path.parent.mkdir(parents=True, exist_ok=True)  # ToDO: Access and Modify data is not true
+        dec_file_path.parent.mkdir(parents=True, exist_ok=True)  # ToDO: Access and Modify data is not true for folders
         with open(file_path, 'rb') as file:
             dec_file_data = self.aesgcm.decrypt(
                 bytes(additional_data['nonce2'], 'utf-8'),
@@ -102,10 +102,10 @@ class FileCryptography:
         return [(lst[0], lst[3]) for lst in self.decrypt_file_list_extended(enc_relative_path_list_with_nonces_and_timestamp)]
 
     def encrypt_key(self, key, nonce):
-        return self.aesgcm.encrypt(bytes.fromhex(nonce), bytes.fromhex(key), associated_data=None).hex()
+        return self.aesgcm.encrypt(bytes.fromhex(nonce), key, associated_data=None)
 
     def decrypt_key(self, ct, nonce):
-        return self.aesgcm.decrypt(bytes.fromhex(nonce), bytes.fromhex(ct), associated_data=None).hex()
+        return self.aesgcm.decrypt(bytes.fromhex(nonce), ct, associated_data=None)
 
     def safe_secrets(self):  # TODO: Remove unused and depricated func
         file = open(self.key_path, 'wb')

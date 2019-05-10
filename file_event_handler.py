@@ -4,14 +4,11 @@ import time
 from watchdog.events import FileSystemEventHandler
 
 from resources import globals
-from security.filecryptography import FileCryptography
-
 
 class MyHandler(FileSystemEventHandler):
     """Custom Handling FileSystemEvents"""
 
-    def __init__(self, file_crypt: FileCryptography, client):
-        self.file_crypt = file_crypt
+    def __init__(self, client):
         self.client = client
         self.new_files = {}
 
@@ -35,9 +32,11 @@ class MyHandler(FileSystemEventHandler):
 
     def on_deleted(self, event):
         abs_path = pl.Path(event.src_path)
+        if abs_path.is_dir():
+            return
         relative_path = abs_path.relative_to(globals.WORK_DIR)
         print("File deleted: " + str(relative_path))
-        self.client.delete_remote_file(relative_path) # ToDO: does not work on multi-delete ?
+        self.client.delete_remote_file(relative_path)  # ToDO: does not work on multi-delete ?
 
     def on_modified(self, event):
         cur_time = time.time()
