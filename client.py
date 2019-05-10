@@ -142,4 +142,4 @@ class Client:
 
 def replace_key_from_backup(shares, username, new_pw):
     key = secretsharing.recover_secret(shares)
-    keyderivation.KeyDerivation(username).replace_pw_from_key(key.hex(), new_pw)
+    keyderivation.KeyDerivation(username).replace_pw_from_key(key, new_pw)
