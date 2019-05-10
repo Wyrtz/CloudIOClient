@@ -50,56 +50,8 @@ class CLI:
             if init_cmd != 'login' and init_cmd != 'replace_password_using_shares':
                 print("Sorry, I did not understand this.")
                 return
-            elif init_cmd == 'replace_password_using_shares':
-                shares_input = []
-                amount_needed = -1
-                while len(shares_input) != amount_needed:
-                    if amount_needed != -1:
-                        print("Expecting " + str(len(shares_input) - amount_needed) + " more shares.")
-                    x = input("Input the first value of a share. (or 'exit' to exit)\n")
-                    if x == 'exit':
-                        return
-                    y = input("Input the second value of THE SAME share. (or 'exit' to exit)\n")
-                    if y == 'exit':
-                        return
-                    t = input("Input the third value of THE SAME share. (or 'exit' to exit)\n")
-                    if t == 'exit':
-                        return
-                    try:
-                        x = int(x)
-                        y = FInt(int(y))
-                        t = int(t)
-                    except ValueError:
-                        print("Could not interpret the share as a share. Try inputting it again:")
-                        continue
-                    if amount_needed == -1:
-                        amount_needed = t + 1
-                    elif t != amount_needed:
-                        print("The share input does not match the other shares. Try inputting again:")
-                        continue
-                    if shares_input.__contains__([x, y, t]):
-                        continue
-                    else:
-                        shares_input = shares_input + [[x, y, t]]
-                has_new_pw = False
-                while not has_new_pw:
-                    username = input("Select a username. (Can pick new or the same)")
-                    new_pw = getpass("Input new password.")
-                    new_pw_ = getpass("Repeat new password.")
-                    if new_pw == new_pw_:
-                        try:
-                            client.replace_key_from_backup(shares_input, username, new_pw)
-                        except BadKeyException:
-                            print("Failed to recover from the shares. Did you input them right? Exiting...")
-                            sleep(1)
-                            return
-                        except BadPasswordSelected:
-                            print("Invalid password selected. Try another one.")
-                            continue
-                        #  No exception. Password has been replaced with new.
-                        return
-                    else:
-                        print("Passwords didn't match. Try again.")
+            elif init_cmd == 'replace_password_using_shares' or init_cmd == "rpus":
+                self.replace_pw_using_shares()
             if pl.Path(globals.KEY_HASHES).exists():
                 username = input("Username:")
                 password = getpass("Password:")
@@ -432,6 +384,57 @@ Available commands:
         if self.get_or_delete_avaliable:
             help += additional
         return help
+
+    def replace_pw_using_shares(self):
+        shares_input = []
+        amount_needed = -1
+        while len(shares_input) != amount_needed:
+            if amount_needed != -1:
+                print("Expecting " + str(amount_needed - len(shares_input)) + " more shares.")
+            x = input("Input the first value of a share. (or 'exit' to exit)\n")
+            if x == 'exit':
+                return
+            y = input("Input the second value of THE SAME share. (or 'exit' to exit)\n")
+            if y == 'exit':
+                return
+            t = input("Input the third value of THE SAME share. (or 'exit' to exit)\n")
+            if t == 'exit':
+                return
+            try:
+                x = int(x)
+                y = FInt(int(y))
+                t = int(t)
+            except ValueError:
+                print("Could not interpret the share as a share. Try inputting it again:")
+                continue
+            if amount_needed == -1:
+                amount_needed = t + 1
+            elif t+1 != amount_needed:
+                print("The share input does not match the other shares. Try inputting again:")
+                continue
+            if shares_input.__contains__([x, y, t]):
+                continue
+            else:
+                shares_input = shares_input + [[x, y, t]]
+        has_new_pw = False
+        while not has_new_pw:
+            username = input("Select a username. (Can pick new or the same)")
+            new_pw = getpass("Input new password.")
+            new_pw_ = getpass("Repeat new password.")
+            if new_pw == new_pw_:
+                try:
+                    client.replace_key_from_backup(shares_input, username, new_pw)
+                except BadKeyException:
+                    print("Failed to recover from the shares. Did you input them right? Exiting...")
+                    sleep(1)
+                    return
+                except BadPasswordSelected:
+                    print("Invalid password selected. Try another one.")
+                    continue
+                #  No exception. Password has been replaced with new.
+                return
+            else:
+                print("Passwords didn't match. Try again.")
 
 
 if __name__ == "__main__":
