@@ -185,7 +185,7 @@ class CLI:
             print(error_message)
             return False
         try:
-            requested_file = globals.SERVER_FILE_LIST[number - 1][0]
+            requested_file = globals.SERVER_FILE_LIST[number - 1].path
         except IndexError:
             print(error_message)
             return False
@@ -269,8 +269,7 @@ class CLI:
         if len(enc_remote_file_list) == 0:
             print("\t(no files on server)")
         else:
-            globals.SERVER_FILE_LIST = self.client.file_crypt.decrypt_file_list(enc_remote_file_list)
-            file_names_only = [touble[0] for touble in globals.SERVER_FILE_LIST]
+            file_names_only = [fio.path for fio in globals.SERVER_FILE_LIST]
             self.print_list(file_names_only)
 
     def print_local_files(self):
@@ -282,12 +281,10 @@ class CLI:
 
     def print_diff_to_server(self):
         local_file_list = self.client.get_local_file_list()
-        enc_remote_file_list = self.client.servercoms.get_file_list()
-        self.dec_remote_file_list = self.client.file_crypt.decrypt_file_list(enc_remote_file_list)
-        globals.SERVER_FILE_LIST = self.dec_remote_file_list
-        pathlib_remote_file_list = [pl.Path(x[0]) for x in self.dec_remote_file_list]
-        files_not_on_server = globals.get_list_difference(local_file_list, pathlib_remote_file_list)
-        files_not_on_client = globals.get_list_difference(pathlib_remote_file_list, local_file_list)
+        self.client.update_server_file_list()
+        remote_file_names = [file_info.path for file_info in globals.SERVER_FILE_LIST]
+        files_not_on_server = globals.get_list_difference(local_file_list, remote_file_names)
+        files_not_on_client = globals.get_list_difference(remote_file_names, local_file_list) # Todo: works ??
         print("Difference:")
         print("*** Client misses {} files ***".format(len(files_not_on_client)))
         if len(files_not_on_client) == 0:
@@ -312,7 +309,7 @@ class CLI:
 
     def generate_key_for_folder_shareing(self, relative_folder_path):
         pw = secrets.token_bytes(32)  # 32 bytes long password
-        kd = keyderivation.KeyDerivation(str(relative_folder_path))
+        kd = keyderivation.KeyDerivation(relative_folder_path.as_posix())
         key = kd.derive_key(pw, False)
         return key
 
@@ -364,13 +361,12 @@ class CLI:
             c_dict[element] = element.stat().st_mtime
 
         # Do the same for server files:
-        enc_remote_file_list = self.client.servercoms.get_file_list()
-        dec_remote_file_list = self.client.file_crypt.decrypt_file_list_extended(enc_remote_file_list)
-        globals.SERVER_FILE_LIST = dec_remote_file_list
-        pathlib_remote_file_list = [(pl.Path(x[0]), x[3]) for x in dec_remote_file_list]  # idx 0 = name, idx 3 = timestamp
+        self.client.update_server_file_list()
         s_dict = {}
-        for element in pathlib_remote_file_list:
-            s_dict[element[0]] = element[1]
+
+        file_info_object: globals.FileInfo
+        for file_info_object in globals.SERVER_FILE_LIST:
+            s_dict[file_info_object.path] = file_info_object.time_stamp
 
         # Copy the client dict, and add the uniques from the server dict.
         # Value = 0 since this means the client does not have this file, thus setting a timestamp of as old as possible

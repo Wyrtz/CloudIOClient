@@ -85,14 +85,14 @@ class KeyDerivation:
         file_crypt = filecryptography.FileCryptography(key)
         return file_crypt
 
-    def append_enc_key_ct_to_enc_keys_file(self, key_ct: bytes, nonce: str):
+    def append_enc_key_ct_to_enc_keys_file(self, key_ct: bytes, nonce: bytes):
         self.enc_keys_file_lock.acquire()
         if not pl.Path(globals.ENC_OLD_KEYS).exists():
             with open(globals.ENC_OLD_KEYS, 'w') as file:
-                file.write(key_ct.hex() + " & " + nonce + "\n")
+                file.write(key_ct.hex() + " & " + nonce.hex() + "\n")
         else:
             with open(globals.ENC_OLD_KEYS, 'a') as file:
-                file.write(key_ct.hex() + " & " + nonce + "\n")
+                file.write(key_ct.hex() + " & " + nonce.hex() + "\n")
         self.enc_keys_file_lock.release()
 
     def retrieve_keys(self, current_key: bytes):
@@ -138,7 +138,7 @@ class KeyDerivation:
             if s == "":  # There will be an empty entry at the end - Just ignore it.
                 continue
             old_enc_keys = [s.rsplit(" & ")] + old_enc_keys  # first in, last out; this is the order we need to dec.
-        return [[bytes.fromhex(element[0]), element[1]] for element in old_enc_keys]
+        return [[bytes.fromhex(element[0]), bytes.fromhex(element[1])] for element in old_enc_keys]
 
     def get_hashes_of_keys(self):
         self.key_hashes_lock.acquire()

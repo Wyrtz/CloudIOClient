@@ -36,7 +36,7 @@ class Client:
         self.file_crypt_dict = {"default": self.file_crypt}
         self.userID = hash_key_to_userID(key)
         self.servercoms = ServComs(server_location, self.userID)
-        globals.SERVER_FILE_LIST = self.file_crypt.decrypt_file_list_extended(self.servercoms.get_file_list())
+        self.file_crypt.update_local_server_file_list(self.servercoms.get_file_list())
         self.observers_list = []
         self.start_observing()
 
@@ -68,14 +68,15 @@ class Client:
         relative_enc_path = enc_file_path.relative_to(globals.TEMPORARY_FOLDER)
         if success:  # TODO: Check if redundant; see servercoms
             print("File\"" + file_path.stem + "\"send successfully!")
-            globals.SERVER_FILE_LIST.append([relative_path, file_name_nonce, relative_enc_path])
+            fio = globals.FileInfo(relative_path, file_name_nonce, relative_enc_path, file_path.stat().st_mtime)
+            globals.SERVER_FILE_LIST.append(fio)
 
     def get_file(self, file_name):
         """Encrypt the name, send a request and get back either '404' or a file candidate.
            If the candidate is valid and newer, keep it."""
         file_crypt = self.get_file_crypt(file_name)
         globals.DOWNLOADED_FILE_QUEUE.append(file_name)
-        enc_file_name_list = [lst[2] for lst in globals.SERVER_FILE_LIST if lst[0] == file_name]
+        enc_file_name_list = [fio.enc_path for fio in globals.SERVER_FILE_LIST if fio.path == file_name]
         if len(set(enc_file_name_list)) != 1:
             raise NotImplementedError("Zero, two or more files on server derived from the same name", enc_file_name_list)
         try:
@@ -87,10 +88,10 @@ class Client:
         pl.Path.unlink(tmp_enc_file_path)
 
     def delete_remote_file(self, file_name: pl.Path):
-        enc_path_lst = [lst[2] for lst in globals.SERVER_FILE_LIST if lst[0] == file_name]
+        enc_path_lst = [fio.enc_path for fio in globals.SERVER_FILE_LIST if fio.path == file_name]
         if len(enc_path_lst) != 1:
             raise NotImplementedError(f"List is not 1 long! Contains: {enc_path_lst}")
-        globals.SERVER_FILE_LIST = [lst for lst in globals.SERVER_FILE_LIST if lst[0] != file_name]
+        globals.SERVER_FILE_LIST = [fio for fio in globals.SERVER_FILE_LIST if fio.path != file_name]
         self.servercoms.register_deletion_of_file(enc_path_lst[0])
 
     def get_file_crypt(self, path: pl.Path) -> FileCryptography:
@@ -98,6 +99,11 @@ class Client:
         relative_path = path.relative_to(globals.WORK_DIR)
         file_crypt = self.file_crypt_dict.get(relative_path, self.file_crypt_dict.get("default"))
         return file_crypt
+
+    def update_server_file_list(self):
+        """Get the filelist from server, decrypt and set globals server file list"""
+        server_file_list = self.servercoms.get_file_list()
+        self.file_crypt.update_local_server_file_list(server_file_list)
 
     def create_shared_folder(self, folder_name: pl.Path, key):
         folder_path = folder_name.absolute()

@@ -44,10 +44,9 @@ class TestClient(unittest.TestCase):
         """Create a new random file and place it in files folder for upload"""
         random_file_path = self.create_random_file().relative_to(globals.WORK_DIR)
         sleep(self.sleep_time)
-        file_list_enc = self.client.servercoms.get_file_list()
-        file_list_dec = self.client.file_crypt.decrypt_file_list(file_list_enc)
-        file_list_dec = [touple[0] for touple in file_list_dec]
-        self.assertIn(random_file_path, file_list_dec)
+        self.client.update_server_file_list()
+        server_files = [fio.path for fio in globals.SERVER_FILE_LIST]
+        self.assertIn(random_file_path, server_files)
 
     def test_delete_file(self):
         """Create file, delete it, check if it is deleted on server"""
@@ -58,10 +57,8 @@ class TestClient(unittest.TestCase):
         self.random_files_list.remove(random_file_path)
         sleep(self.sleep_time)
         self.assertNotIn(random_file_relative_path, self.client.get_local_file_list())
-        file_list_enc = self.client.servercoms.get_file_list()
-        file_list_dec = self.client.file_crypt.decrypt_file_list(file_list_enc)
-        file_list_dec = [touple[0] for touple in file_list_dec]
-        self.assertNotIn(random_file_relative_path, file_list_dec)
+        self.client.update_server_file_list()
+        self.assertNotIn(random_file_relative_path, globals.SERVER_FILE_LIST)
 
     def test_retrieve_file_from_server(self):
         """Create new file, make sure it is uploaded, delete it locally, get it back"""
@@ -70,10 +67,9 @@ class TestClient(unittest.TestCase):
         random_file_relative_path = random_file_path.relative_to(globals.WORK_DIR)
         random_file_name = pl.Path(random_file_path.name)
         sleep(self.sleep_time)
-        file_list_enc = self.client.servercoms.get_file_list()
-        file_list_dec = self.client.file_crypt.decrypt_file_list(file_list_enc)
-        file_list_dec = [touple[0] for touple in file_list_dec]
-        self.assertIn(random_file_relative_path, file_list_dec)
+        self.client.update_server_file_list()
+        server_file_paths = [fio.path for fio in globals.SERVER_FILE_LIST]
+        self.assertIn(random_file_relative_path, server_file_paths)
         # Delete the file locally, "close client" such that the server is not asked to also delete (archive)
         self.client.close_observers()
         sleep(0.2)

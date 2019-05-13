@@ -24,18 +24,16 @@ class test_file_cryptography(unittest.TestCase):
         globals.clear_tmp()
 
     def test_encrypt_decrypt(self):
-        start_file = ""
-        end_file = ""
         with open(self.file_path, "rt") as file:
             start_file = file.read()
         nonce1 = globals.get_nonce()
         nonce2 = globals.get_nonce()
-        file_encrypted, additional_data = self.file_crypt.encrypt_file(
+        encrypted_file_path, additional_data = self.file_crypt.encrypt_file(
             self.file_path,
             nonce1,
             nonce2)
         file_decrypted = self.file_crypt.decrypt_file(
-            file_path=file_encrypted,
+            file_path=encrypted_file_path,
             additional_data=additional_data)
         with open(file_decrypted, "rt") as file:
            end_file = file.read()
@@ -50,6 +48,12 @@ class test_file_cryptography(unittest.TestCase):
         self.assertRaises(cryptography.exceptions.InvalidTag,
                           self.file_crypt.decrypt_file,
                           file_encrypted, additional_data)
+
+    def test_name_encryption(self):
+        name_nonce = globals.get_nonce()
+        enc_name = self.file_crypt.encrypt_relative_file_path(self.file_path, name_nonce)
+        dec_name = self.file_crypt.decrypt_relative_file_path(enc_name, name_nonce)
+        self.assertEqual(dec_name, self.file_path)
 
     def recover_enc_old_keys(self, enc_old_keys):
         for ct_nonce_pair in enc_old_keys:
