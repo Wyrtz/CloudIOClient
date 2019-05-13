@@ -2,7 +2,7 @@ import os
 import pathlib as pl
 import secrets
 from asyncio import sleep
-from typing import List
+from typing import Dict
 
 
 def get_CloudIOClient_path():
@@ -67,7 +67,4 @@ SERVER_LOCATION = 'wyrnas.myqnapcloud.com:8001'
 KEY_HASHES = pl.Path.joinpath(RESOURCE_DIR, 'key_hashes.txt')
 KEY_SALTS = pl.Path.joinpath(RESOURCE_DIR, 'key_salts.txt')  # TODO: Perhaps instead of static make random & record all salts.
 ENC_OLD_KEYS = pl.Path.joinpath(RESOURCE_DIR, 'enc_keys.txt')  # Should contain old key encryptions
-SERVER_FILE_LIST: List[FileInfo] = []
-
-
-
+SERVER_FILE_DICT: Dict[pl.Path, FileInfo] = {}

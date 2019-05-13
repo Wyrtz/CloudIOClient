@@ -69,15 +69,15 @@ class Client:
         if success:  # TODO: Check if redundant; see servercoms
             print("File\"" + file_path.stem + "\"send successfully!")
             fio = globals.FileInfo(relative_path, file_name_nonce, relative_enc_path, file_path.stat().st_mtime)
-            globals.SERVER_FILE_LIST.append(fio)
+            globals.SERVER_FILE_DICT[fio.path] = fio
 
     def get_file(self, file_name):
         """Encrypt the name, send a request and get back either '404' or a file candidate.
            If the candidate is valid and newer, keep it."""
         file_crypt = self.get_file_crypt(file_name)
         globals.DOWNLOADED_FILE_QUEUE.append(file_name)
-        enc_file_name_list = [fio.enc_path for fio in globals.SERVER_FILE_LIST if fio.path == file_name]
-        if len(set(enc_file_name_list)) != 1:
+        enc_file_name_list = [fio.enc_path for fio in globals.SERVER_FILE_DICT.values() if fio.path == file_name]
+        if len(enc_file_name_list) != 1:
             raise NotImplementedError("Zero, two or more files on server derived from the same name", enc_file_name_list)
         try:
             tmp_enc_file_path, additional_data = self.servercoms.get_file(str(enc_file_name_list[0]))
@@ -87,11 +87,11 @@ class Client:
         file_crypt.decrypt_file(tmp_enc_file_path, additional_data=additional_data)
         pl.Path.unlink(tmp_enc_file_path)
 
-    def delete_remote_file(self, file_name: pl.Path):
-        enc_path_lst = [fio.enc_path for fio in globals.SERVER_FILE_LIST if fio.path == file_name]
+    def delete_remote_file(self, file_rel_path: pl.Path):
+        enc_path_lst = [fio.enc_path for fio in globals.SERVER_FILE_DICT.values() if fio.path == file_rel_path]
         if len(enc_path_lst) != 1:
             raise NotImplementedError(f"List is not 1 long! Contains: {enc_path_lst}")
-        globals.SERVER_FILE_LIST = [fio for fio in globals.SERVER_FILE_LIST if fio.path != file_name]
+        globals.SERVER_FILE_DICT.pop(file_rel_path)
         self.servercoms.register_deletion_of_file(enc_path_lst[0])
 
     def get_file_crypt(self, path: pl.Path) -> FileCryptography:

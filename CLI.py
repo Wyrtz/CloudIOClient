@@ -185,7 +185,8 @@ class CLI:
             print(error_message)
             return False
         try:
-            requested_file = globals.SERVER_FILE_LIST[number - 1].path
+            key = list(globals.SERVER_FILE_DICT)[number - 1]
+            requested_file = globals.SERVER_FILE_DICT[key].path  # Assume is in the dict.
         except IndexError:
             print(error_message)
             return False
@@ -269,7 +270,7 @@ class CLI:
         if len(enc_remote_file_list) == 0:
             print("\t(no files on server)")
         else:
-            file_names_only = [fio.path for fio in globals.SERVER_FILE_LIST]
+            file_names_only = list(globals.SERVER_FILE_DICT)
             self.print_list(file_names_only)
 
     def print_local_files(self):
@@ -282,7 +283,7 @@ class CLI:
     def print_diff_to_server(self):
         local_file_list = self.client.get_local_file_list()
         self.client.update_server_file_list()
-        remote_file_names = [file_info.path for file_info in globals.SERVER_FILE_LIST]
+        remote_file_names = list(globals.SERVER_FILE_DICT)
         files_not_on_server = globals.get_list_difference(local_file_list, remote_file_names)
         files_not_on_client = globals.get_list_difference(remote_file_names, local_file_list) # Todo: works ??
         print("Difference:")
@@ -365,7 +366,7 @@ class CLI:
         s_dict = {}
 
         file_info_object: globals.FileInfo
-        for file_info_object in globals.SERVER_FILE_LIST:
+        for file_info_object in globals.SERVER_FILE_DICT.values():
             s_dict[file_info_object.path] = file_info_object.time_stamp
 
         # Copy the client dict, and add the uniques from the server dict.

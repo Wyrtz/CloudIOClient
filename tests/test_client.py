@@ -1,17 +1,15 @@
-import unittest
+import os
 import pathlib as pl
+import unittest
 from time import sleep
 
 import requests
 
 import client
-from resources import globals
 from client import Client
-import os
-
-from security.filecryptography import FileCryptography
-from tests import setup_test_environment as ste
+from resources import globals
 from security import keyderivation
+from tests import setup_test_environment as ste
 
 
 class TestClient(unittest.TestCase):
@@ -39,13 +37,12 @@ class TestClient(unittest.TestCase):
         self.client.close_observers()
         self.unregister_user(self.client.userID)
 
-
     def test_created_file_is_uploaded(self):
         """Create a new random file and place it in files folder for upload"""
         random_file_path = self.create_random_file().relative_to(globals.WORK_DIR)
         sleep(self.sleep_time)
         self.client.update_server_file_list()
-        server_files = [fio.path for fio in globals.SERVER_FILE_LIST]
+        server_files = list(globals.SERVER_FILE_DICT)
         self.assertIn(random_file_path, server_files)
 
     def test_delete_file(self):
@@ -58,7 +55,7 @@ class TestClient(unittest.TestCase):
         sleep(self.sleep_time)
         self.assertNotIn(random_file_relative_path, self.client.get_local_file_list())
         self.client.update_server_file_list()
-        self.assertNotIn(random_file_relative_path, globals.SERVER_FILE_LIST)
+        self.assertNotIn(random_file_relative_path, list(globals.SERVER_FILE_DICT))
 
     def test_retrieve_file_from_server(self):
         """Create new file, make sure it is uploaded, delete it locally, get it back"""
@@ -68,7 +65,7 @@ class TestClient(unittest.TestCase):
         random_file_name = pl.Path(random_file_path.name)
         sleep(self.sleep_time)
         self.client.update_server_file_list()
-        server_file_paths = [fio.path for fio in globals.SERVER_FILE_LIST]
+        server_file_paths = list(globals.SERVER_FILE_DICT)
         self.assertIn(random_file_relative_path, server_file_paths)
         # Delete the file locally, "close client" such that the server is not asked to also delete (archive)
         self.client.close_observers()

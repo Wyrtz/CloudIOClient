@@ -20,7 +20,7 @@ class MyHandler(FileSystemEventHandler):
     def on_created(self, event):
         """Send newly created file to the server"""
         file_path = pl.Path(event.src_path)
-        if file_path.is_dir():
+        if file_path.is_dir() or file_path.name.startswith(".goutputstream-"):
             return
         relative_file_path = file_path.relative_to(globals.WORK_DIR)
         print("File created: " + str(relative_file_path))
@@ -32,7 +32,7 @@ class MyHandler(FileSystemEventHandler):
 
     def on_deleted(self, event):
         abs_path = pl.Path(event.src_path)
-        if abs_path.is_dir():
+        if abs_path.is_dir() or abs_path.name.startswith(".goutputstream-"):
             return
         relative_path = abs_path.relative_to(globals.WORK_DIR)
         print("File deleted: " + str(relative_path))
@@ -41,7 +41,7 @@ class MyHandler(FileSystemEventHandler):
     def on_modified(self, event):
         cur_time = time.time()
         file_path = pl.Path(event.src_path)
-        if file_path.is_dir():
+        if file_path.is_dir() or file_path.name.startswith(".goutputstream-"):
             return
         relative_file_path = file_path.relative_to(globals.WORK_DIR)
         if relative_file_path in self.new_files:
@@ -52,8 +52,8 @@ class MyHandler(FileSystemEventHandler):
                 self.new_files.pop(relative_file_path)
         print("File modified:" + str(relative_file_path))
         # Get the nonce used for the filename such that the filename stays the same:
-        file_name_nonce = [fio.nonce for fio in globals.SERVER_FILE_LIST if fio.path == relative_file_path]
-        if len(set(file_name_nonce)) != 1:
+        file_name_nonce = [fio.nonce for fio in globals.SERVER_FILE_DICT.values() if fio.path == relative_file_path]
+        if len(file_name_nonce) != 1:
             print("How could this happen D: ??")
             error_message = f'Number of nonces match is not 1: {file_name_nonce}'
             raise NotImplementedError(error_message)
