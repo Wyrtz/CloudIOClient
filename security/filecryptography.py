@@ -20,10 +20,10 @@ class FileCryptography:
     def __init__(self, key: bytes):
         self.aesgcm = AESGCM(key=key)
 
-    def encrypt_relative_file_path(self, relative_file_path, nonce):
+    def encrypt_relative_file_path(self, relative_file_path: pl.Path, nonce):
         return self.aesgcm.encrypt(
             bytes(str(nonce), 'utf-8'),
-            bytes(str(relative_file_path), 'utf-8'),
+            bytes(relative_file_path.as_posix(), 'utf-8'),
             associated_data=None).hex() + ".cio"
 
     def encrypt_file(self, file_path, nonce1, nonce2):
