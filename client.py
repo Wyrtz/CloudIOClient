@@ -104,19 +104,18 @@ class Client:
     def update_server_file_list(self):
         """Get the filelist from server, decrypt and set globals server file list"""
         combined_dict = {}
-        for filecrypt, servcoms in self.folder_to_file_crypt_servercoms_dict:
+        for filecrypt, servcoms in self.folder_to_file_crypt_servercoms_dict.values():
             server_file_list = servcoms.get_file_list()
             combined_dict.update(filecrypt.decrypt_server_file_list(server_file_list))
             # ToDO: handle collisions in keys
         globals.SERVER_FILE_DICT = combined_dict
 
-    def create_shared_folder(self, folder_name: pl.Path, key):
+    def create_shared_folder(self, folder_name: pl.Path, key: bytes):
         folder_path = folder_name.absolute()
         folder_path.mkdir()
         file_crypt = FileCryptography(key)
         servercoms = ServComs(self.server_location, hash_key_to_userID(key))
         self.folder_to_file_crypt_servercoms_dict[folder_name] = (file_crypt, servercoms)
-        return secretsharing.split_secret(key, 1, 1)
 
     def get_local_file_list(self):
         """Return a list where each element is the string name of this file"""
@@ -152,8 +151,7 @@ class Client:
         key = self.kd.derive_key(password)
         return secretsharing.split_secret(key, required_share_amount_to_recover - 1, share_amount)
 
-    def add_key_from_shares(self, shares: list):
-        key = secretsharing.recover_secret(shares)
+    def add_share_key(self, key: bytes):
         self.save_shared_key(key)  # TODO: Implement this
         servercoms = ServComs(self.server_location, hash_key_to_userID(key))
         files = servercoms.get_file_list()

@@ -140,8 +140,9 @@ class CLI:
                     print("Folder already exists!")
                     continue
                 key = self.generate_key_for_folder_shareing(relative_folder_path)
-                secret = self.client.create_shared_folder(relative_folder_path, key)
-                print(secret[0])
+                self.client.create_shared_folder(relative_folder_path, key)
+                print("Give this key to whoever you want to share the folder with. Send it safely!")
+                print(key.hex())
 
             elif command == "asf" or command == "add_shared_folder":
                 self.add_shared_folder()
@@ -316,8 +317,13 @@ class CLI:
         return key
 
     def add_shared_folder(self):
-        shares = self.get_shares_from_user()
-        self.client.add_key_from_shares(shares)
+        hex_key = input("Input key:\n")
+        try:
+            key = bytes.fromhex(hex_key)
+        except ValueError:
+            print("Invalid key!")
+            return
+        self.client.add_share_key(key)
 
     def backup_password(self):
         r1 = input("You are about to backup your password. Are you sure you want to do this?(y/n)")
