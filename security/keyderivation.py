@@ -62,7 +62,7 @@ class KeyDerivation:
             file.write(hash_of_key.hex() + "\n")
         self.key_hashes_lock.release()
 
-    def replace_pw(self, old_pw, new_pw):  # It's called future security!
+    def replace_pw(self, old_pw, new_pw) -> bytes:  # It's called future security!
         if not self.has_password():
             raise IllegalMethodUsageException()
         if len(new_pw) < 12:
@@ -74,7 +74,7 @@ class KeyDerivation:
         enc_old_key = file_crypt.encrypt_key(old_key, nonce)
         self.append_enc_key_ct_to_enc_keys_file(enc_old_key, nonce)
         self.store_hash_of_key(new_key)
-        return file_crypt
+        return new_key
 
     def select_first_pw(self, pw):
         if len(pw) < 12:

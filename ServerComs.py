@@ -65,7 +65,9 @@ class ServComs():
         enc_file_list_with_nonces_and_timestamp = response_dict['file_list']
         return enc_file_list_with_nonces_and_timestamp
 
-    # Todo: rename file: Send delete file request (and send the renamed file)
+    def rename_file(self, enc_file_name_previous, new_file_path, new_additional_data):
+        self.register_deletion_of_file(enc_file_name_previous)
+        self.send_file(new_file_path, new_additional_data)
 
     def register_deletion_of_file(self, enc_file_name):
         """Signals to server that the file known by its encrypted alias should not be considered 'live' anymore."""

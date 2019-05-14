@@ -115,7 +115,7 @@ class CLI:
             self.get_or_delete_avaliable = False
             if command == "sync" or command == "s":
                 print("Synchronising...")
-                sync_dict = self.generate_sync_dict()
+                sync_dict = self.client.generate_sync_dict()
                 self.client.sync_files(sync_dict)
                 print("Synchronising done!")
             elif command == "ls" or command == "lf" or command == "local_files":
@@ -131,7 +131,7 @@ class CLI:
                 self.print_diff_to_server()
             elif command == "ss" or command == "sync_status":
                 self.get_or_delete_avaliable = True
-                sync_dict = self.generate_sync_dict()
+                sync_dict = self.client.generate_sync_dict()
                 self.print_sync_dict(sync_dict)
             elif command == "csf" or command == "create_shared_folder":
                 folder_name = input("Name of shared folder:\n") # ToDo: check if legal folder name
@@ -164,13 +164,15 @@ class CLI:
         if new_password != new_password_:
             self.clear_screen()
             print("New password doens't match.")
-        try:
-            self.client.kd.replace_pw(old_pw=old_pw, new_pw=new_password)
-            input("Replaced password successfully. Press enter to continue.")
-            self.clear_screen()
-        except (BadKeyException, BadPasswordSelected):
-            input("Failed to replace password. Press enter to continue.")
-            self.clear_screen()
+        else:
+            try:
+                print("Replacing password. Might take a second!")
+                self.client.replace_password(old_pw=old_pw, new_pw=new_password)
+                input("Replaced password successfully. Press enter to continue.")
+                self.clear_screen()
+            except (BadKeyException, BadPasswordSelected):
+                input("Failed to replace password. Press enter to continue.")
+                self.clear_screen()
 
     def interact_with_server(self, commands, command):
         error_message = f"{Fore.RED}Provide what file (number) you want"
@@ -264,7 +266,6 @@ class CLI:
 
         return shares_input
 
-
     def print_remote_files(self):
         enc_remote_file_list = self.client.servercoms.get_file_list()
         if len(enc_remote_file_list) == 0:
@@ -351,37 +352,6 @@ class CLI:
             print(share)
         print("When you have written these down or distributed them press enter.")
         input('Remember; these should only be given to parties you can trust not to collaborate against you.')
-
-    def generate_sync_dict(self):
-        """Generates a dictionary with key:files value:(client_time, server_time)
-        representing the time stamp of a file for client or server. time stamp 0 = this party does not have the file"""
-        # Create a dictionary with key = file name, value = timestamp for local files
-        local_file_list = self.client.get_local_file_list()
-        c_dict = {}
-        for element in local_file_list:
-            c_dict[element] = element.stat().st_mtime
-
-        # Do the same for server files:
-        self.client.update_server_file_list()
-        s_dict = {}
-
-        file_info_object: globals.FileInfo
-        for file_info_object in globals.SERVER_FILE_DICT.values():
-            s_dict[file_info_object.path] = file_info_object.time_stamp
-
-        # Copy the client dict, and add the uniques from the server dict.
-        # Value = 0 since this means the client does not have this file, thus setting a timestamp of as old as possible
-        full_dict = c_dict.copy()
-        for key in s_dict:
-            if key not in full_dict:
-                full_dict[key] = 0
-
-        # Create the tuple dictionary key = filename, value = (c_time, s_time)
-        for key in full_dict:
-            val = s_dict.get(key) if key in s_dict else 0
-            full_dict[key] = (full_dict.get(key), val)
-
-        return full_dict
 
     def print_sync_dict(self, sync_dict: dict):
         """Prints a synchronisation dictionary as produced by "generate_sync_dict"""

@@ -19,13 +19,13 @@ class TestClient(unittest.TestCase):
 
     def setUp(self):
         self.serverIp = 'wyrnas.myqnapcloud.com:8001' #'127.0.0.1:443'
-        self.sleep_time = 1
+        self.sleep_time = 3
         self.random_files_list = []
         self.username = "abecattematteman"
         self.pw = '1234567890101112'
         self.kd = keyderivation.KeyDerivation(self.username)
         self.ste = ste.global_test_configer(self.kd)
-        self.enc = self.kd.select_first_pw(self.pw)
+        self.file_crypt = self.kd.select_first_pw(self.pw)
         self.client = Client(username=self.username, password=self.pw, server_location=self.serverIp)
 
     def tearDown(self):
@@ -119,6 +119,26 @@ class TestClient(unittest.TestCase):
         new_pw = 'wertyuiosdfghj'
         client.replace_key_from_backup(shares[3:15], self.username, new_pw)
         self.client.kd.derive_key(new_pw)
+
+    def test_replacing_pw_syncs_files(self):
+        l1 = list(globals.SERVER_FILE_DICT)
+        self.assertTrue(l1 == [])
+        rand_path1 = self.create_random_file().relative_to(globals.WORK_DIR)
+        rand_path2 = self.create_random_file().relative_to(globals.WORK_DIR)
+        rand_path3 = self.create_random_file().relative_to(globals.WORK_DIR)
+        sleep(self.sleep_time)
+
+        l2 = list(globals.SERVER_FILE_DICT)
+        for path in [rand_path1, rand_path2, rand_path3]:
+            self.assertIn(path, l2)
+        self.assertTrue(len(l2) == 3)
+        new_pw = 'qwertyuiokjhgfdsghjhg'
+        self.client.replace_password(self.pw, new_pw)
+        l3 = list(globals.SERVER_FILE_DICT)
+        for path in [rand_path1, rand_path2, rand_path3]:
+            self.assertIn(path, l3)
+
+
 
     # def test_get_file_crypt(self):
     #     # Create 3 file_crypt from 3 keys:

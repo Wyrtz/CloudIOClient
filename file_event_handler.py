@@ -5,6 +5,7 @@ from watchdog.events import FileSystemEventHandler
 
 from resources import globals
 
+
 class MyHandler(FileSystemEventHandler):
     """Custom Handling FileSystemEvents"""
 
@@ -60,11 +61,14 @@ class MyHandler(FileSystemEventHandler):
         file_name_nonce = file_name_nonce[0]
         self.client.send_file(file_path, file_name_nonce=file_name_nonce)
 
-
     def on_moved(self, event):
         file_path = pl.Path(event.src_path)
         relative_file_path = file_path.relative_to(globals.WORK_DIR)
         print("File moved:", str(relative_file_path))
         print("Not implemented!!")
 
-    # Todo: on_ rename file ?? (move event ??)
+    # Todo: on_ rename file ?? (move event ??) (Saving file on unix can be a move event)
+    # TODO: Deleting folders.
+    # TODO: Delete doesn't work all the time.
+    # TODO: CLI's cmd 'df _' on only local.
+    # TODO: Fix get_file - Make observers turn off temporarily.

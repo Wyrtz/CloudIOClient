@@ -2,12 +2,13 @@ import pathlib as pl
 from hashlib import sha3_224
 from time import sleep
 
+from cryptography.exceptions import InvalidTag
 from watchdog.observers import Observer
 
 from ServerComs import ServComs
 from file_event_handler import MyHandler
 from resources import globals
-from security import keyderivation, secretsharing, filecryptography
+from security import keyderivation, secretsharing
 from security.filecryptography import FileCryptography
 
 
@@ -33,9 +34,9 @@ class Client:
             self.file_crypt = FileCryptography(key)
         else:
             raise AssertionError  # Handled by CLI now.
-        self.file_crypt_dict = {"default": self.file_crypt}
         self.userID = hash_key_to_userID(key)
         self.servercoms = ServComs(server_location, self.userID)
+        self.folder_to_file_crypt_userID_dict = {"default": (self.file_crypt, self.servercoms)}
         self.file_crypt.update_local_server_file_list(self.servercoms.get_file_list())
         self.observers_list = []
         self.start_observing()
@@ -51,13 +52,13 @@ class Client:
         new_observer.start()
 
     def send_file(self, file_path, file_name_nonce=globals.get_nonce()):
-        file_crypt = self.get_file_crypt(file_path)
+        file_crypt, servercoms = self.get_file_crypt_servercoms(file_path)
         try:
             file_data_nonce = globals.get_nonce()  # Unique
             enc_file_path, additional_data = file_crypt.encrypt_file(
                 file_path, file_name_nonce, file_data_nonce
             )
-            success = self.servercoms.send_file(enc_file_path, additional_data)
+            success = servercoms.send_file(enc_file_path, additional_data)
         except PermissionError:
             print("Unable to send file immediately...")
             sleep(1)
@@ -74,13 +75,13 @@ class Client:
     def get_file(self, file_name):
         """Encrypt the name, send a request and get back either '404' or a file candidate.
            If the candidate is valid and newer, keep it."""
-        file_crypt = self.get_file_crypt(file_name)
+        file_crypt, servercoms = self.get_file_crypt_servercoms(file_name)
         globals.DOWNLOADED_FILE_QUEUE.append(file_name)
         enc_file_name_list = [fio.enc_path for fio in globals.SERVER_FILE_DICT.values() if fio.path == file_name]
         if len(enc_file_name_list) != 1:
             raise NotImplementedError("Zero, two or more files on server derived from the same name", enc_file_name_list)
         try:
-            tmp_enc_file_path, additional_data = self.servercoms.get_file(str(enc_file_name_list[0]))
+            tmp_enc_file_path, additional_data = servercoms.get_file(str(enc_file_name_list[0]))
         except FileNotFoundError:
             print("File not found on server.")
             return
@@ -94,11 +95,11 @@ class Client:
         globals.SERVER_FILE_DICT.pop(file_rel_path)
         self.servercoms.register_deletion_of_file(enc_path_lst[0])
 
-    def get_file_crypt(self, path: pl.Path) -> FileCryptography:
+    def get_file_crypt_servercoms(self, path: pl.Path) -> (FileCryptography, ServComs):
         path = path.absolute()
         relative_path = path.relative_to(globals.WORK_DIR)
-        file_crypt = self.file_crypt_dict.get(relative_path, self.file_crypt_dict.get("default"))
-        return file_crypt
+        file_crypt, servercoms = self.folder_to_file_crypt_userID_dict.get(relative_path, self.folder_to_file_crypt_userID_dict.get("default"))
+        return file_crypt, servercoms
 
     def update_server_file_list(self):
         """Get the filelist from server, decrypt and set globals server file list"""
@@ -109,7 +110,8 @@ class Client:
         folder_path = folder_name.absolute()
         folder_path.mkdir()
         file_crypt = FileCryptography(key)
-        self.file_crypt_dict[folder_name] = file_crypt
+        servercoms = ServComs(self.server_location, hash_key_to_userID(key))
+        self.folder_to_file_crypt_userID_dict[folder_name] = (file_crypt, servercoms)
         return secretsharing.split_secret(key, 1, 1)
 
     def get_local_file_list(self):
@@ -117,20 +119,21 @@ class Client:
         file_list = [i.relative_to(globals.WORK_DIR) for i in globals.FILE_FOLDER.glob("**/*.*")]
         return file_list
 
-    def sync_files(self, sync_dict):
+    def sync_files(self):
+        sync_dict = self.generate_sync_dict()
         self.close_observers()
-        for key in sync_dict:
-            c_time, s_time = sync_dict.get(key)
-            key = pl.Path.joinpath(globals.WORK_DIR, key)
+        for file_path in sync_dict:
+            c_time, s_time = sync_dict.get(file_path)
+            file_path = pl.Path.joinpath(globals.WORK_DIR, file_path)
             if c_time < s_time:  # Server has the newest version
                 # Send and delete file locally, such that the client can recover it if needed
-                if key.exists():
-                    self.send_file(key)
-                    key.unlink()
-                rel_key = key.relative_to(globals.WORK_DIR)
-                self.get_file(rel_key)
+                if file_path.exists():
+                    self.send_file(file_path)
+                    file_path.unlink()
+                rel_file_path = file_path.relative_to(globals.WORK_DIR)
+                self.get_file(rel_file_path)
             elif c_time > s_time:  # Client has the newest version
-                self.send_file(key)
+                self.send_file(file_path)
         self.start_observing()
 
     def close_observers(self):
@@ -147,8 +150,66 @@ class Client:
 
     def add_key_from_shares(self, shares: list):
         key = secretsharing.recover_secret(shares)
-        # Todo: encrypt this key under our existing key and save it
-        # Todo: How to map ? UserID -> key ? Folder -> key ? third?
+        self.save_shared_key(key)  # TODO: Implement this
+        servercoms = ServComs(self.server_location, hash_key_to_userID(key))
+        files = servercoms.get_file_list()
+        if len(files) == 0:
+            print("Empty shared folder. Put something in the folder to share and try again.")
+            return
+        file_crypt = FileCryptography(key)
+        enc_relative_path, nonce, _ = files[0]
+        nonce = bytes.fromhex(nonce)
+        try:
+            dec_file_rel_path = file_crypt.decrypt_relative_file_path(enc_relative_path, nonce)
+        except InvalidTag:
+            print("Failed somehow!")
+            return
+        folder_name: pl.Path = list(dec_file_rel_path.parents)[-2]
+        self.folder_to_file_crypt_userID_dict[folder_name] = (file_crypt, servercoms)
+        self.sync_files()
+
+    def replace_password(self, old_pw, new_pw):  # TODO: Save shared_keys under new pw
+        self.sync_files()
+        new_key = self.kd.replace_pw(old_pw, new_pw)
+        self.userID = hash_key_to_userID(new_key)
+        self.file_crypt = FileCryptography(new_key)
+        self.servercoms = ServComs(self.server_location, self.userID)
+        self.folder_to_file_crypt_userID_dict['default'] = self.file_crypt, self.servercoms
+        self.sync_files()
+
+    def generate_sync_dict(self):
+        """Generates a dictionary with key:files value:(client_time, server_time)
+        representing the time stamp of a file for client or server. time stamp 0 = this party does not have the file"""
+        # Create a dictionary with key = file name, value = timestamp for local files
+        local_file_list = self.get_local_file_list()
+        c_dict = {}
+        for element in local_file_list:
+            c_dict[element] = pl.Path.joinpath(globals.WORK_DIR, element).stat().st_mtime
+
+        # Do the same for server files:
+        self.update_server_file_list()
+        s_dict = {}
+
+        file_info_object: globals.FileInfo
+        for file_info_object in globals.SERVER_FILE_DICT.values():
+            s_dict[file_info_object.path] = file_info_object.time_stamp
+
+        # Copy the client dict, and add the uniques from the server dict.
+        # Value = 0 since this means the client does not have this file, thus setting a timestamp of as old as possible
+        full_dict = c_dict.copy()
+        for key in s_dict:
+            if key not in full_dict:
+                full_dict[key] = 0
+
+        # Create the tuple dictionary key = filename, value = (c_time, s_time)
+        for key in full_dict:
+            val = s_dict.get(key) if key in s_dict else 0
+            full_dict[key] = (full_dict.get(key), val)
+
+        return full_dict
+
+    def save_shared_key(self, key):
+        pass  # self.file_crypt.encrypt_key()
 
 
 def replace_key_from_backup(shares, username, new_pw):

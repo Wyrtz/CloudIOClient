@@ -7,7 +7,7 @@ class pin_gen:
 
     def __init__(self, length):
         self.length = length
-        self.pin = None # Todo: Hash the pin ?
+        self.pin = None  # Todo: Hash the pin ?
 
     def generate_pin(self, alphabet=True):
         dict = string.digits

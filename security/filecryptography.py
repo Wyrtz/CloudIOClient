@@ -114,26 +114,3 @@ class FileCryptography:
     def decrypt_key(self, ct: bytes, nonce:bytes) -> bytes:
         """Decrypts an encrypted key with this file_crypts key"""
         return self.aesgcm.decrypt(nonce, ct, associated_data=None)
-
-    def safe_secrets(self):  # TODO: Remove unused and depricated func
-        file = open(self.key_path, 'wb')
-        file.write(self.key)
-        file.close()
-
-        file = open(self.salt_path, "wb")
-        file.write(self.salt)
-        file.close()
-
-    def get_secrets(self):  # TODO: Remove unused and depricated func
-        #ToDo: Save in plaintext ?
-        key_exists = os.path.isfile(self.key_path)
-        salt_exists = os.path.isfile(self.salt_path)
-        if key_exists and salt_exists:
-            with open(self.key_path, "rb") as file:
-                self.key = file.read()
-            with open(self.salt_path, 'rb') as file:
-                self.salt = file.read()
-        else:
-            self.key = AESGCM.generate_key(bit_length=256)
-            self.salt = bytes(secrets.token_hex(12), 'utf-8')
-            self.safe_secrets()
