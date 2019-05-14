@@ -36,8 +36,8 @@ class Client:
             raise AssertionError  # Handled by CLI now.
         self.userID = hash_key_to_userID(key)
         self.servercoms = ServComs(server_location, self.userID)
-        self.folder_to_file_crypt_userID_dict = {"default": (self.file_crypt, self.servercoms)}
-        self.file_crypt.update_local_server_file_list(self.servercoms.get_file_list())
+        self.folder_to_file_crypt_servercoms_dict = {"default": (self.file_crypt, self.servercoms)}
+        self.update_server_file_list()
         self.observers_list = []
         self.start_observing()
 
@@ -98,20 +98,24 @@ class Client:
     def get_file_crypt_servercoms(self, path: pl.Path) -> (FileCryptography, ServComs):
         path = path.absolute()
         relative_path = path.relative_to(globals.WORK_DIR)
-        file_crypt, servercoms = self.folder_to_file_crypt_userID_dict.get(relative_path, self.folder_to_file_crypt_userID_dict.get("default"))
+        file_crypt, servercoms = self.folder_to_file_crypt_servercoms_dict.get(relative_path, self.folder_to_file_crypt_servercoms_dict.get("default"))
         return file_crypt, servercoms
 
     def update_server_file_list(self):
         """Get the filelist from server, decrypt and set globals server file list"""
-        server_file_list = self.servercoms.get_file_list()
-        self.file_crypt.update_local_server_file_list(server_file_list)
+        combined_dict = {}
+        for filecrypt, servcoms in self.folder_to_file_crypt_servercoms_dict:
+            server_file_list = servcoms.get_file_list()
+            combined_dict.update(filecrypt.decrypt_server_file_list(server_file_list))
+            # ToDO: handle collisions in keys
+        globals.SERVER_FILE_DICT = combined_dict
 
     def create_shared_folder(self, folder_name: pl.Path, key):
         folder_path = folder_name.absolute()
         folder_path.mkdir()
         file_crypt = FileCryptography(key)
         servercoms = ServComs(self.server_location, hash_key_to_userID(key))
-        self.folder_to_file_crypt_userID_dict[folder_name] = (file_crypt, servercoms)
+        self.folder_to_file_crypt_servercoms_dict[folder_name] = (file_crypt, servercoms)
         return secretsharing.split_secret(key, 1, 1)
 
     def get_local_file_list(self):
@@ -165,7 +169,7 @@ class Client:
             print("Failed somehow!")
             return
         folder_name: pl.Path = list(dec_file_rel_path.parents)[-2]
-        self.folder_to_file_crypt_userID_dict[folder_name] = (file_crypt, servercoms)
+        self.folder_to_file_crypt_servercoms_dict[folder_name] = (file_crypt, servercoms)
         self.sync_files()
 
     def replace_password(self, old_pw, new_pw):  # TODO: Save shared_keys under new pw
@@ -174,7 +178,7 @@ class Client:
         self.userID = hash_key_to_userID(new_key)
         self.file_crypt = FileCryptography(new_key)
         self.servercoms = ServComs(self.server_location, self.userID)
-        self.folder_to_file_crypt_userID_dict['default'] = self.file_crypt, self.servercoms
+        self.folder_to_file_crypt_servercoms_dict['default'] = self.file_crypt, self.servercoms
         self.sync_files()
 
     def generate_sync_dict(self):

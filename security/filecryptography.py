@@ -95,7 +95,7 @@ class FileCryptography:
         globals.DOWNLOADED_FILE_QUEUE.append(dec_file_name)
         return dec_file_path
 
-    def update_local_server_file_list(self, enc_relative_path_list_with_nonces_and_timestamp: list):
+    def decrypt_server_file_list(self, enc_relative_path_list_with_nonces_and_timestamp: list) -> dict:
         file_dict = {}
         for enc_relative_path, nonce, time_stamp in enc_relative_path_list_with_nonces_and_timestamp:
             nonce = bytes.fromhex(nonce)
@@ -105,7 +105,7 @@ class FileCryptography:
             except InvalidTag:  # File on server encrypted under another key.
                 continue  # Todo: Somethings fucky! Should not happen anymore. raise Error ?
             file_dict[dec_file_rel_path] = globals.FileInfo(dec_file_rel_path, nonce, enc_relative_path, time_stamp)
-        globals.SERVER_FILE_DICT = file_dict
+        return file_dict
 
     def encrypt_key(self, key: bytes, nonce: bytes) -> bytes:
         """Encrypts a key with this file_crypts key"""
