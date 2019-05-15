@@ -79,7 +79,7 @@ class FileCryptography:
             last_mod_time_s = additional_data["t"]
             if last_mod_time_c > last_mod_time_s:
                 raise OlderServerFileError("Server send old file to replace local version!")
-            # ToDo: check if works!
+            # ToDo: Exit gracefully ?
         additional_data_json = json.dumps(additional_data)
         dec_file_path.parent.mkdir(parents=True, exist_ok=True)  # ToDO: Access and Modify data is not true for folders
         with open(file_path, 'rb') as file:
@@ -100,10 +100,7 @@ class FileCryptography:
         for enc_relative_path, nonce, time_stamp in enc_relative_path_list_with_nonces_and_timestamp:
             nonce = bytes.fromhex(nonce)
             time_stamp = float(time_stamp)
-            try:
-                dec_file_rel_path = self.decrypt_relative_file_path(enc_relative_path, nonce)
-            except InvalidTag:  # File on server encrypted under another key.
-                continue  # Todo: Somethings fucky! Should not happen anymore. raise Error ?
+            dec_file_rel_path = self.decrypt_relative_file_path(enc_relative_path, nonce)  # Assert Succeeds
             file_dict[dec_file_rel_path] = globals.FileInfo(dec_file_rel_path, nonce, enc_relative_path, time_stamp)
         return file_dict
 

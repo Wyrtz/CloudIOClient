@@ -13,10 +13,6 @@ from security import keyderivation, secretsharing
 from security.filecryptography import FileCryptography
 
 
-# TODO: Should be able to use old encrypted keys.
-# TODO: Can recover files under old password.
-
-
 def hash_key_to_userID(key):
     hasher = sha3_224()
     hasher.update(bytes("Keyhash", 'utf-8'))
@@ -59,7 +55,7 @@ class Client:
             enc_file_path, additional_data = file_crypt.encrypt_file(
                 file_path, file_name_nonce, file_data_nonce
             )
-            success = servercoms.send_file(enc_file_path, additional_data)
+            servercoms.send_file(enc_file_path, additional_data)
         except PermissionError:
             print("Unable to send file immediately...")
             sleep(1)
@@ -68,10 +64,9 @@ class Client:
         pl.Path.unlink(enc_file_path)  # Delete file
         relative_path = file_path.relative_to(globals.WORK_DIR)
         relative_enc_path = enc_file_path.relative_to(globals.TEMPORARY_FOLDER)
-        if success:  # TODO: Check if redundant; see servercoms
-            print("File\"" + file_path.stem + "\"send successfully!")
-            fio = globals.FileInfo(relative_path, file_name_nonce, relative_enc_path, file_path.stat().st_mtime)
-            globals.SERVER_FILE_DICT[fio.path] = fio
+        print("File\"" + file_path.stem + "\"send successfully!")
+        fio = globals.FileInfo(relative_path, file_name_nonce, relative_enc_path, file_path.stat().st_mtime)
+        globals.SERVER_FILE_DICT[fio.path] = fio
 
     def get_file(self, file_name):
         """Encrypt the name, send a request and get back either '404' or a file candidate.
@@ -94,13 +89,14 @@ class Client:
         if len(enc_path_lst) != 1:
             raise NotImplementedError(f"List is not 1 long! Contains: {enc_path_lst}")
         globals.SERVER_FILE_DICT.pop(file_rel_path)
-        self.servercoms.register_deletion_of_file(enc_path_lst[0])
+        _, coms = self.get_file_crypt_servercoms(file_rel_path)
+        coms.register_deletion_of_file(enc_path_lst[0])
 
-    def get_file_crypt_servercoms(self, path: pl.Path) -> (FileCryptography, ServComs):
-        if path.is_absolute():
-            rel_path = path.relative_to(globals.WORK_DIR)
+    def get_file_crypt_servercoms(self, file_path: pl.Path) -> (FileCryptography, ServComs):
+        if file_path.is_absolute():
+            rel_path = file_path.relative_to(globals.WORK_DIR)
         else:
-            rel_path = path
+            rel_path = file_path
         folder_name = pl.Path(rel_path.parts[0]) / rel_path.parts[1]
         file_crypt, servercoms = self.folder_to_file_crypt_servercoms_dict.get(
             folder_name.as_posix(),
@@ -114,7 +110,6 @@ class Client:
         for filecrypt, servcoms in self.folder_to_file_crypt_servercoms_dict.values():
             server_file_list = servcoms.get_file_list()
             combined_dict.update(filecrypt.decrypt_server_file_list(server_file_list))
-            # ToDO: handle collisions in keys
         globals.SERVER_FILE_DICT = combined_dict
 
     def create_shared_folder(self, folder_name: pl.Path, key: bytes):
@@ -124,7 +119,7 @@ class Client:
         # folder_name: pl.Path = list(rel_folder_path.parents)[-3]
         file_crypt = FileCryptography(key)
         servercoms = ServComs(self.server_location, hash_key_to_userID(key))
-        folder_name = pl.Path(rel_folder_path.parts[0]) / rel_folder_path.parts[1]  # ToDO: ugly plz fix ;(
+        folder_name = pl.Path(rel_folder_path.parts[0]) / rel_folder_path.parts[1]
         self.folder_to_file_crypt_servercoms_dict[folder_name.as_posix()] = (file_crypt, servercoms)
 
     def get_local_file_list(self):
@@ -176,9 +171,7 @@ class Client:
         except InvalidTag:
             print("Failed somehow!")
             return
-        # folder_name: pl.Path = dec_file_rel_path.relative_to(globals.WORK_DIR)
-        # folder_name: pl.Path = list(dec_file_rel_path.parents)[-3]
-        folder_name = pl.Path(dec_file_rel_path.parts[0]) / dec_file_rel_path.parts[1]
+        folder_name = pl.Path(dec_file_rel_path.parts[0]) / dec_file_rel_path.parts[1]  # TODO: Bad folder name!!!
         self.folder_to_file_crypt_servercoms_dict[folder_name.as_posix()] = (file_crypt, servercoms)
         self.sync_files()
 

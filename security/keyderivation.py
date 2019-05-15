@@ -40,7 +40,8 @@ class KeyDerivation:
 
     def hash_key(self, key: bytes) -> bytes:
         hasher = sha3_512()
-        hasher.update(bytes("hash key salt", 'utf-8'))  # Its another salt. TODO: random salt? Perhaps username?
+        hasher.update(bytes("hash key salt", 'utf-8'))  # Its another salt.
+        hasher.update(self.salt)
         hasher.update(key)
         return hasher.digest()
 

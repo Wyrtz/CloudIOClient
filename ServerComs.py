@@ -13,7 +13,7 @@ from resources import globals
 
 class ServComs():
     """Communicates with the file-host server"""
-    # ToDO: Do we even have a connection ?
+    # ToDO: Do we even have a connection?
 
     def __init__(self, serverIP, userID):
         self.serverLocation = serverIP
@@ -32,7 +32,6 @@ class ServComs():
                                             'additional_data': bytes(json.dumps(additional_data), 'utf-8')},
                                      verify=self.verify)
             response.raise_for_status()
-            return True
 
     def get_file(self, enc_file_name):
         """Retrive enc_file_name from server and place it in tmp (ready for decryption)"""

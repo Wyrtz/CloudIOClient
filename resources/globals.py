@@ -1,6 +1,7 @@
 import os
 import pathlib as pl
 import secrets
+import string
 from asyncio import sleep
 from typing import Dict
 
@@ -65,6 +66,12 @@ class FileInfo:
         return self.__str__()
 
 
+def is_safe_folder_name(folder_name: str) -> bool:
+    legal_chars = string.ascii_letters + '-_ ' + string.digits
+    if not all([char in legal_chars for char in folder_name]):
+        return False
+    return True
+
 PROJECT_NAME = "CloudIOClient"
 PROJECT_NAME = PROJECT_NAME
 WORK_DIR = get_CloudIOClient_path()
@@ -77,7 +84,5 @@ create_folders()
 DOWNLOADED_FILE_QUEUE = []
 SERVER_LOCATION = 'wyrnas.myqnapcloud.com:8001'
 KEY_HASHES = pl.Path.joinpath(RESOURCE_DIR, 'key_hashes.txt')
-KEY_SALTS = pl.Path.joinpath(RESOURCE_DIR,
-                             'key_salts.txt')  # TODO: Perhaps instead of static make random & record all salts.
 ENC_OLD_KEYS = pl.Path.joinpath(RESOURCE_DIR, 'enc_keys.txt')  # Should contain old key encryptions
 SERVER_FILE_DICT: Dict[pl.Path, FileInfo] = {}

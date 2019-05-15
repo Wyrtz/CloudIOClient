@@ -1,6 +1,7 @@
 import os
 import platform
 import secrets
+import string
 from getpass import getpass
 from time import sleep
 
@@ -134,14 +135,16 @@ class CLI:
                 sync_dict = self.client.generate_sync_dict()
                 self.print_sync_dict(sync_dict)
             elif command == "csf" or command == "create_shared_folder":
-                folder_name = input("Name of shared folder:\n") # ToDo: check if legal folder name
+                folder_name = input("Name of shared folder:\n")
+                if not globals.is_safe_folder_name(folder_name):
+                    print("Illegal pathname.")
+                    continue
                 absolute_folder_path = pl.Path.joinpath(globals.FILE_FOLDER, folder_name)
                 if absolute_folder_path.exists():
                     print("Folder already exists!")
                     continue
                 key = globals.generate_random_key()
-                rel_path = pl.Path.relative_to(absolute_folder_path, globals.WORK_DIR)
-                self.client.create_shared_folder(rel_path, key)
+                self.client.create_shared_folder(pl.Path(folder_name), key)
                 print("Give this key to whoever you want to share the folder with. Send it safely!")
                 print(key.hex())
 
@@ -209,11 +212,11 @@ class CLI:
                     return True
             print("Deleting file...")
             print(requested_file)
-            self.client.delete_remote_file(requested_file)  # ToDO: not done! If file is on server, not on client, fucks up (what file to ask for del ?)
+            self.client.delete_remote_file(requested_file)  # ToDO: not done! If file is on server, not on client, fucks up (what file to ask for del ?) # TODO: See if this TODO is TODONE
             return True
 
     def replace_pw_using_shares(self):
-        shares_input = self.get_shares_from_user()
+        shares_input = self.get_shares_from_user()  # TODO: Fix bug (expects more than necesary.)
         has_new_pw = False
         while not has_new_pw:
             username = input("Select a username. (Can pick new or the same)")
@@ -288,7 +291,7 @@ class CLI:
         self.client.update_server_file_list()
         remote_file_names = list(globals.SERVER_FILE_DICT)
         files_not_on_server = globals.get_list_difference(local_file_list, remote_file_names)
-        files_not_on_client = globals.get_list_difference(remote_file_names, local_file_list) # Todo: works ??
+        files_not_on_client = globals.get_list_difference(remote_file_names, local_file_list)
         print("Difference:")
         print("*** Client misses {} files ***".format(len(files_not_on_client)))
         if len(files_not_on_client) == 0:

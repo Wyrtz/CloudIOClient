@@ -98,5 +98,3 @@ class TestServercoms(unittest.TestCase):
             self.unregister_user(userID1)
             self.unregister_user(userID2)
             self.unregister_user(userID3)
-
-    # TODO: test_can_retrieve_old_files_under new alias(self):
