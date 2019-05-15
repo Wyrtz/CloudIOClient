@@ -18,7 +18,7 @@ class TestClient(unittest.TestCase):
         requests.post('https://' + self.serverIp + '/unregister/' + userID, verify=False)
 
     def setUp(self):
-        self.serverIp = 'wyrnas.myqnapcloud.com:8001' #'127.0.0.1:443'
+        self.serverIp = 'wyrnas.myqnapcloud.com:8001'  # '127.0.0.1:443'
         self.sleep_time = 3
         self.random_files_list = []
         self.username = "abecattematteman"
@@ -32,7 +32,10 @@ class TestClient(unittest.TestCase):
         self.ste.recover_resources()
         for file in self.random_files_list:
             if pl.Path.exists(file):
-                pl.Path.unlink(file)
+                if pl.Path.is_dir(file):
+                    pl.Path.rmdir(file)
+                else:
+                    pl.Path.unlink(file)
         globals.clear_tmp()
         self.client.close_observers()
         self.unregister_user(self.client.userID)
@@ -138,7 +141,75 @@ class TestClient(unittest.TestCase):
         for path in [rand_path1, rand_path2, rand_path3]:
             self.assertIn(path, l3)
 
+    def test_filecrypt_and_servcoms_of_primary_key_is_retrievable(self):
+        some_path = globals.FILE_FOLDER.joinpath('something').relative_to(globals.WORK_DIR)
+        self.assertTrue('files/something' == some_path.as_posix(),
+                        'expected "files/something" but was ' + some_path.as_posix())
+        filecrypt, servcoms = self.client.get_file_crypt_servercoms(some_path)  # Default
+        self.assertTrue(filecrypt == self.client.file_crypt)
+        self.assertTrue(servcoms == self.client.servercoms)
 
+    def test_filecrypt_and_servcoms_of_shared_key_is_retrievable(self):
+        '''
+        Tests to see if, when we have created a folder to be shared, that when retrieving servcoms and filecrypt
+        for the folder that we retrieve some that aren't default and that the servcoms is that of the shared key.
+        '''
+        key = globals.generate_random_key()  # Get a random key
+        test_folder_name = pl.Path('test')
+        test_folder_abs_path = globals.FILE_FOLDER.joinpath(test_folder_name)
+        self.random_files_list.append(test_folder_abs_path)  # 4 teardown - remove the folder
+        test_folder_rel_path = test_folder_abs_path.relative_to(globals.WORK_DIR)
+        self.client.create_shared_folder(test_folder_name, key)  # create the folder to be shared
+        self.assertEqual(test_folder_rel_path, pl.Path('files/test'))  # path is what we expect?
+        filecrypt, servcoms = self.client.get_file_crypt_servercoms(test_folder_rel_path)
+        self.assertFalse(filecrypt == self.client.file_crypt)  # Not default
+        self.assertFalse(servcoms == self.client.servercoms)  # Not default
+        self.assertTrue(servcoms.userID == client.hash_key_to_userID(key))  # Correct ID
+
+    def test_shared_folders_are_use_right_key(self):
+        key = globals.generate_random_key()  # Get a random key
+        test_folder_name = pl.Path('test')
+        test_folder_abs_path = globals.FILE_FOLDER.joinpath(test_folder_name)
+        test_folder_rel_path = test_folder_abs_path.relative_to(globals.WORK_DIR)
+        self.client.create_shared_folder(test_folder_name, key)  # create the folder to be shared
+        random_file_abs_path = self.create_random_file(test_folder_abs_path)
+        self.random_files_list.append(test_folder_abs_path)  # 4 teardown - remove the folder
+        filecrypt, servcoms = self.client.get_file_crypt_servercoms(test_folder_rel_path)
+        sleep(self.sleep_time)
+        file_list = servcoms.get_file_list()
+        self.assertEqual(len(file_list), 1)
+        enc_rel_path, nonce, _ = file_list[0]
+        retrived_rel_path = filecrypt.decrypt_relative_file_path(enc_rel_path, bytes.fromhex(nonce))
+        self.assertEqual(retrived_rel_path, random_file_abs_path.relative_to(globals.WORK_DIR))
+
+    def test_can_add_shared_folder(self):
+        share_key = globals.generate_random_key()  # Get a random key
+        test_folder_name = pl.Path('test')
+        test_folder_abs_path = globals.FILE_FOLDER.joinpath(test_folder_name)
+        test_folder_rel_path = test_folder_abs_path.relative_to(globals.WORK_DIR)
+        client1 = self.client
+        client1.create_shared_folder(test_folder_name, share_key)
+        random_file_abs_path = self.create_random_file(test_folder_abs_path)
+        self.random_files_list.append(test_folder_abs_path)  # 4 teardown - remove the folder
+        # close down first client
+        sleep(self.sleep_time)
+        client1.close_observers()
+
+        pl.Path.unlink(random_file_abs_path)  # Remove the file ...
+        pl.Path.rmdir(test_folder_abs_path)   # ... and dir to emulate new client.
+
+        other_username = 'sdfghjkytredefwsdf'
+        other_pw = 'sfghjkluytsdfsgrwqe'
+        kd = keyderivation.KeyDerivation(other_username)
+        key_client2 = kd.derive_key(other_pw, False)
+        kd.store_hash_of_key(key_client2)  # Now we're another client
+
+        client2 = Client(other_username, other_pw)
+        client2.add_share_key(share_key)
+        filecrypt, servcoms = client2.get_file_crypt_servercoms(test_folder_rel_path)
+        self.assertNotEqual(client2.file_crypt, filecrypt)  # Not defaulting
+        self.assertNotEqual(client2.servercoms, servcoms)   # Not defaulting
+        self.assertTrue(pl.Path.exists(random_file_abs_path))  # Got the shared file (and thereby folder).
 
     # def test_get_file_crypt(self):
     #     # Create 3 file_crypt from 3 keys:

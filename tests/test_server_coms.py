@@ -24,8 +24,8 @@ class TestServercoms(unittest.TestCase):
         self.kd = keyderivation.KeyDerivation("a3sdfg7h8")
         self.ste = ste.global_test_configer(self.kd)
         self.enc = self.kd.select_first_pw("127834634643")
-        self.nonce1 = globals.get_nonce()
-        self.nonce2 = globals.get_nonce()
+        self.nonce1 = globals.generate_random_nonce()
+        self.nonce2 = globals.generate_random_nonce()
 
     def test_send_file(self):
         self.send_file(self.nonce1, self.nonce2)
@@ -71,10 +71,10 @@ class TestServercoms(unittest.TestCase):
         user2 = ServComs(self.serverIp, userID2)
         user3 = ServComs(self.serverIp, userID3)
         try:
-            nonce1_1 = globals.get_nonce()
-            nonce1_2 = globals.get_nonce()
-            nonce2_1 = globals.get_nonce()
-            nonce2_2 = globals.get_nonce()
+            nonce1_1 = globals.generate_random_nonce()
+            nonce1_2 = globals.generate_random_nonce()
+            nonce2_1 = globals.generate_random_nonce()
+            nonce2_2 = globals.generate_random_nonce()
             self.send_file(nonce1_1, nonce1_2, user1)  # have two send a file
             self.send_file(nonce2_1, nonce2_2, user2)
             files_user_1 = user1.get_file_list()  # get their files on server back

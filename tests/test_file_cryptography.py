@@ -26,8 +26,8 @@ class test_file_cryptography(unittest.TestCase):
     def test_encrypt_decrypt(self):
         with open(self.file_path, "rt") as file:
             start_file = file.read()
-        nonce1 = globals.get_nonce()
-        nonce2 = globals.get_nonce()
+        nonce1 = globals.generate_random_nonce()
+        nonce2 = globals.generate_random_nonce()
         encrypted_file_path, additional_data = self.file_crypt.encrypt_file(
             self.file_path,
             nonce1,
@@ -40,8 +40,8 @@ class test_file_cryptography(unittest.TestCase):
         self.assertEqual(start_file, end_file, "Files differ!")
 
     def test_invalid_tag(self):
-        nonce1 = globals.get_nonce()
-        nonce2 = globals.get_nonce()
+        nonce1 = globals.generate_random_nonce()
+        nonce2 = globals.generate_random_nonce()
         file_encrypted, additional_data = self.file_crypt.encrypt_file(self.file_path, nonce1, nonce2)
         with open(file_encrypted, "ab") as file:
             file.write(b'hejjj')
@@ -50,7 +50,7 @@ class test_file_cryptography(unittest.TestCase):
                           file_encrypted, additional_data)
 
     def test_name_encryption(self):
-        name_nonce = globals.get_nonce()
+        name_nonce = globals.generate_random_nonce()
         enc_name = self.file_crypt.encrypt_relative_file_path(self.file_path, name_nonce)
         dec_name = self.file_crypt.decrypt_relative_file_path(enc_name, name_nonce)
         self.assertEqual(dec_name, self.file_path)

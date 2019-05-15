@@ -70,7 +70,7 @@ class KeyDerivation:
         old_key = self.derive_key(old_pw)
         new_key = self.derive_key(new_pw, False)
         file_crypt = filecryptography.FileCryptography(new_key)
-        nonce = globals.get_nonce()
+        nonce = globals.generate_random_nonce()
         enc_old_key = file_crypt.encrypt_key(old_key, nonce)
         self.append_enc_key_ct_to_enc_keys_file(enc_old_key, nonce)
         self.store_hash_of_key(new_key)
@@ -163,7 +163,7 @@ class KeyDerivation:
             raise BadKeyException
         new_key = self.derive_key(new_pw, False)
         file_crypt = filecryptography.FileCryptography(new_key)
-        nonce = globals.get_nonce()
+        nonce = globals.generate_random_nonce()
         enc_old_key = file_crypt.encrypt_key(key, nonce)
         self.append_enc_key_ct_to_enc_keys_file(enc_old_key, nonce)
         self.store_hash_of_key(new_key)

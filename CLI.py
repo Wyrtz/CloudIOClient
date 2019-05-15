@@ -139,7 +139,7 @@ class CLI:
                 if absolute_folder_path.exists():
                     print("Folder already exists!")
                     continue
-                key = self.generate_key_for_folder_shareing()
+                key = globals.generate_random_key()
                 rel_path = pl.Path.relative_to(absolute_folder_path, globals.WORK_DIR)
                 self.client.create_shared_folder(rel_path, key)
                 print("Give this key to whoever you want to share the folder with. Send it safely!")
@@ -310,13 +310,6 @@ class CLI:
         for numb, element in enumerate(list_names_to_print):
             print("\t", numb + 1, end=self.calculate_spacing(numb))
             print(element)
-
-    def generate_key_for_folder_shareing(self):
-        user = secrets.token_bytes(10)
-        pw = secrets.token_bytes(32)  # 32 bytes long password
-        kd = keyderivation.KeyDerivation(str(user))
-        key = kd.derive_key(pw, False)
-        return key
 
     def add_shared_folder(self):
         hex_key = input("Input key:\n")

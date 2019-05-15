@@ -52,10 +52,10 @@ class Client:
         self.observers_list.append(new_observer)
         new_observer.start()
 
-    def send_file(self, file_path, file_name_nonce=globals.get_nonce()):
+    def send_file(self, file_path, file_name_nonce=globals.generate_random_nonce()):
         file_crypt, servercoms = self.get_file_crypt_servercoms(file_path)
         try:
-            file_data_nonce = globals.get_nonce()  # Unique
+            file_data_nonce = globals.generate_random_nonce()  # Unique
             enc_file_path, additional_data = file_crypt.encrypt_file(
                 file_path, file_name_nonce, file_data_nonce
             )
@@ -98,16 +98,14 @@ class Client:
 
     def get_file_crypt_servercoms(self, path: pl.Path) -> (FileCryptography, ServComs):
         if path.is_absolute():
-            path.relative_to(globals.WORK_DIR)
-        folder_name = pl.Path(path.parts[0]) / path.parts[1]
-        # folder_name: pl.Path = list(path.parents)[-3]
-        # folder_name: pl.Path = path.relative_to(globals.WORK_DIR)
-        print(self.folder_to_file_crypt_servercoms_dict)
-        file_crypt, servercoms = self.folder_to_file_crypt_servercoms_dict.get(folder_name.as_posix(), self.folder_to_file_crypt_servercoms_dict.get("default"))
-        print()
-        print(folder_name)
-        print(file_crypt)
-        print(servercoms)
+            rel_path = path.relative_to(globals.WORK_DIR)
+        else:
+            rel_path = path
+        folder_name = pl.Path(rel_path.parts[0]) / rel_path.parts[1]
+        file_crypt, servercoms = self.folder_to_file_crypt_servercoms_dict.get(
+            folder_name.as_posix(),
+            self.folder_to_file_crypt_servercoms_dict.get("default")
+        )
         return file_crypt, servercoms
 
     def update_server_file_list(self):
@@ -120,7 +118,7 @@ class Client:
         globals.SERVER_FILE_DICT = combined_dict
 
     def create_shared_folder(self, folder_name: pl.Path, key: bytes):
-        folder_path = folder_name.absolute()
+        folder_path = globals.FILE_FOLDER.joinpath(folder_name)
         folder_path.mkdir()
         rel_folder_path = folder_path.relative_to(globals.WORK_DIR)
         # folder_name: pl.Path = list(rel_folder_path.parents)[-3]

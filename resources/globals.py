@@ -4,6 +4,8 @@ import secrets
 from asyncio import sleep
 from typing import Dict
 
+from security import keyderivation
+
 
 def get_CloudIOClient_path():
     curdir = pl.Path.cwd()
@@ -21,6 +23,7 @@ def create_folders():
     if not os.path.isdir(FILE_FOLDER):
         os.mkdir(FILE_FOLDER)
 
+
 def clear_tmp():
     for file in os.listdir(TEMPORARY_FOLDER):
         file_path = os.path.join(TEMPORARY_FOLDER, file)
@@ -35,8 +38,16 @@ def get_list_difference(list_1: list, list_2: list) -> list:  # TODO: What if na
     return [x for x in list_1 if x not in list_2]
 
 
-def get_nonce(length=12):
+def generate_random_nonce(length=12):
     return secrets.token_bytes(length)
+
+
+def generate_random_key():
+    user = secrets.token_bytes(10)
+    pw = secrets.token_bytes(32)  # 32 bytes long password
+    kd = keyderivation.KeyDerivation(str(user))
+    key = kd.derive_key(pw, False)
+    return key
 
 
 class FileInfo:
@@ -53,6 +64,7 @@ class FileInfo:
     def __repr__(self):
         return self.__str__()
 
+
 PROJECT_NAME = "CloudIOClient"
 PROJECT_NAME = PROJECT_NAME
 WORK_DIR = get_CloudIOClient_path()
@@ -65,6 +77,7 @@ create_folders()
 DOWNLOADED_FILE_QUEUE = []
 SERVER_LOCATION = 'wyrnas.myqnapcloud.com:8001'
 KEY_HASHES = pl.Path.joinpath(RESOURCE_DIR, 'key_hashes.txt')
-KEY_SALTS = pl.Path.joinpath(RESOURCE_DIR, 'key_salts.txt')  # TODO: Perhaps instead of static make random & record all salts.
+KEY_SALTS = pl.Path.joinpath(RESOURCE_DIR,
+                             'key_salts.txt')  # TODO: Perhaps instead of static make random & record all salts.
 ENC_OLD_KEYS = pl.Path.joinpath(RESOURCE_DIR, 'enc_keys.txt')  # Should contain old key encryptions
 SERVER_FILE_DICT: Dict[pl.Path, FileInfo] = {}
