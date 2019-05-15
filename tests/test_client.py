@@ -182,7 +182,7 @@ class TestClient(unittest.TestCase):
         retrived_rel_path = filecrypt.decrypt_relative_file_path(enc_rel_path, bytes.fromhex(nonce))
         self.assertEqual(retrived_rel_path, random_file_abs_path.relative_to(globals.WORK_DIR))
 
-    def test_can_add_shared_folder(self):
+    def test_can_add_shared_folder(self):  # ToDo: JEG FAILER!
         share_key = globals.generate_random_key()  # Get a random key
         test_folder_name = pl.Path('test')
         test_folder_abs_path = globals.FILE_FOLDER.joinpath(test_folder_name)
