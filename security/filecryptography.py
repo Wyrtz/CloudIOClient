@@ -7,6 +7,7 @@ import time
 
 from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from hashlib import sha3_224
 
 from resources import globals
 
@@ -19,6 +20,18 @@ class FileCryptography:
 
     def __init__(self, key: bytes):
         self.aesgcm = AESGCM(key=key)
+        hasher = sha3_224()
+        hasher.update(key)
+        self.hash = hasher.digest().hex()
+
+    def __hash__(self):
+        return self.hash
+
+    def __eq__(self, other):
+        if not isinstance(other, type(self)):
+            return False
+        other: FileCryptography = other
+        return other.hash == self.hash
 
     def encrypt_relative_file_path(self, relative_file_path: pl.Path, nonce: bytes) -> str:
         enc_file_name: str = self.aesgcm.encrypt(
@@ -108,6 +121,6 @@ class FileCryptography:
         """Encrypts a key with this file_crypts key"""
         return self.aesgcm.encrypt(nonce, key, associated_data=None)
 
-    def decrypt_key(self, ct: bytes, nonce:bytes) -> bytes:
+    def decrypt_key(self, key_ct: bytes, nonce: bytes) -> bytes:
         """Decrypts an encrypted key with this file_crypts key"""
-        return self.aesgcm.decrypt(nonce, ct, associated_data=None)
+        return self.aesgcm.decrypt(nonce, key_ct, associated_data=None)

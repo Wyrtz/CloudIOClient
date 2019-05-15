@@ -19,6 +19,16 @@ class global_test_configer:
             pl.Path(globals.ENC_OLD_KEYS).unlink()
         except FileNotFoundError:  # File might not exist.
             pass
+        try:
+            with open(globals.SHARED_KEYS, "rt") as file:
+                self.shared_folder_keys = file.read()
+            globals.SHARED_KEYS.unlink()
+        except FileNotFoundError:  # File might not exist at all
+            pass
+
+    def recover_shared_keys(self):
+        with open(globals.SHARED_KEYS, "wt") as file:
+            file.write(self.shared_folder_keys)
 
     def recover_enc_old_keys(self):
         for ct_nonce_pair in self.enc_old_keys:
@@ -48,3 +58,9 @@ class global_test_configer:
                 pl.Path(globals.ENC_OLD_KEYS).unlink()
             except FileNotFoundError:
                 pass  # Shouldn't exist and doesn't already
+        try:
+            self.recover_shared_keys()
+        except AttributeError:
+            if globals.SHARED_KEYS.exists():
+                globals.SHARED_KEYS.unlink()
+

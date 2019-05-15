@@ -214,6 +214,9 @@ class TestClient(unittest.TestCase):
     def test_shared_folders_persist(self):
         key = globals.generate_random_key()
         folder_name = pl.Path('forglem_mig_ai')
+        test_folder_abs_path = globals.FILE_FOLDER.joinpath(folder_name)
+        self.random_files_list.append(test_folder_abs_path)  # 4 teardown - remove the folder
+        # Create the shared folder
         self.client.create_shared_folder(folder_name, key)
         dict1 = self.client.folder_to_file_crypt_servercoms_dict
 
@@ -221,30 +224,8 @@ class TestClient(unittest.TestCase):
 
         client2 = Client(self.username, self.pw)
         dict2 = client2.folder_to_file_crypt_servercoms_dict
+        client2.close_observers()
         self.assertEqual(dict1, dict2, "Expect new client instance to have loaded the previous client's dict.")
-
-    # def test_get_file_crypt(self):
-    #     # Create 3 file_crypt from 3 keys:
-    #     user_1 = "qwerty"
-    #     user_2 = "asdfgh"
-    #     user_3 = "zxcvbn"
-    #     pw_1 = "qwertyuiiopå¨"
-    #     pw_2 = "asdfghjklæø*"
-    #     pw_3 = "<>zxcvbnm,.-"
-    #     kd1 = keyderivation.KeyDerivation(user_1)
-    #     key1 = kd1.derive_key(pw_1)
-    #     file_crypt_1 = FileCryptography(key1)
-    #     kd2 = keyderivation.KeyDerivation(user_2)
-    #     key2 = kd1.derive_key(pw_2)
-    #     file_crypt_2 = FileCryptography(key2)
-    #     kd3 = keyderivation.KeyDerivation(user_3)
-    #     key3 = kd1.derive_key(pw_3)
-    #     file_crypt_3 = FileCryptography(key3)
-    #     defualt_file_crypt= self.client.file_crypt
-    #     p1 = pl.Path(cw)
-    #     p2
-    #     p3
-    #     self.client.file_crypt_dict[]
 
 
     def create_random_file(self, path=globals.FILE_FOLDER):

@@ -13,6 +13,7 @@ class pin_gen:
         dict = string.digits
         if alphabet:
             dict += string.ascii_uppercase
+
         secGen = secrets.SystemRandom()
         self.pin = "".join(secGen.sample(dict, self.length))
         if profanity.contains_profanity(self.pin):

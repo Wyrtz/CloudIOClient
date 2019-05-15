@@ -85,4 +85,5 @@ DOWNLOADED_FILE_QUEUE = []
 SERVER_LOCATION = 'wyrnas.myqnapcloud.com:8001'
 KEY_HASHES = pl.Path.joinpath(RESOURCE_DIR, 'key_hashes.txt')
 ENC_OLD_KEYS = pl.Path.joinpath(RESOURCE_DIR, 'enc_keys.txt')  # Should contain old key encryptions
+SHARED_KEYS = RESOURCE_DIR / "shared_keys"
 SERVER_FILE_DICT: Dict[pl.Path, FileInfo] = {}

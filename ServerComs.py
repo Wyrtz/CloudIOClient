@@ -9,18 +9,31 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 import requests
 
 from resources import globals
+from hashlib import sha3_224
 
 
 class ServComs():
     """Communicates with the file-host server"""
     # ToDO: Do we even have a connection?
 
-    def __init__(self, serverIP, userID):
+    def __init__(self, serverIP: str, userID: str):
         self.serverLocation = serverIP
         self.userID = userID
         self.cert = "wyrnasmyqnapcloudcom.crt"
         self.verify = False  #self.cert
         self.register_user()
+
+    def __hash__(self):
+        hasher: sha3_224 = sha3_224()
+        hasher.update(bytes(self.serverLocation, "utf-8"))
+        hasher.update(bytes(self.userID, "utf-8"))
+        hasher.update(bytes(self.cert, "utf-8"))
+        return hasher.digest().hex()
+
+    def __eq__(self, other):
+        if not isinstance(other, type(self)):
+            return False
+        return self.__hash__() == other.__hash__()
 
     def send_file(self, file_path, additional_data):
         """Send provided filename to the server"""

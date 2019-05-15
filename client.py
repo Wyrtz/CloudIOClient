@@ -34,6 +34,7 @@ class Client:
         self.userID = hash_key_to_userID(key)
         self.servercoms = ServComs(server_location, self.userID)
         self.folder_to_file_crypt_servercoms_dict = {"default": (self.file_crypt, self.servercoms)}
+        self.folder_to_file_crypt_servercoms_dict.update(self.load_shared_keys())
         self.update_server_file_list()
         self.observers_list = []
         self.start_observing()
@@ -116,10 +117,10 @@ class Client:
         folder_path = globals.FILE_FOLDER.joinpath(folder_name)
         folder_path.mkdir()
         rel_folder_path = folder_path.relative_to(globals.WORK_DIR)
-        # folder_name: pl.Path = list(rel_folder_path.parents)[-3]
         file_crypt = FileCryptography(key)
         servercoms = ServComs(self.server_location, hash_key_to_userID(key))
         folder_name = pl.Path(rel_folder_path.parts[0]) / rel_folder_path.parts[1]
+        self.save_shared_key(folder_name, key)
         self.folder_to_file_crypt_servercoms_dict[folder_name.as_posix()] = (file_crypt, servercoms)
 
     def get_local_file_list(self):
@@ -157,7 +158,6 @@ class Client:
         return secretsharing.split_secret(key, required_share_amount_to_recover - 1, share_amount)
 
     def add_share_key(self, key: bytes):
-        self.save_shared_key(key)  # TODO: Implement this
         servercoms = ServComs(self.server_location, hash_key_to_userID(key))
         files = servercoms.get_file_list()
         if len(files) == 0:
@@ -172,6 +172,7 @@ class Client:
             print("Failed somehow!")
             return
         folder_name = pl.Path(dec_file_rel_path.parts[0]) / dec_file_rel_path.parts[1]  # TODO: Bad folder name!!!
+        self.save_shared_key(folder_name, key)
         self.folder_to_file_crypt_servercoms_dict[folder_name.as_posix()] = (file_crypt, servercoms)
         self.sync_files()
 
@@ -215,8 +216,31 @@ class Client:
 
         return full_dict
 
-    def save_shared_key(self, key):
-        pass  # self.file_crypt.encrypt_key()
+    def save_shared_key(self, folder_path: pl.Path, key: bytes):
+        nonce = globals.generate_random_nonce()
+        enc_key = self.file_crypt.encrypt_key(key, nonce)
+        new_entry = (folder_path.as_posix(), enc_key.hex(), nonce.hex())
+        if globals.SHARED_KEYS.exists():
+            data: list = json.loads(open(globals.SHARED_KEYS, "rt").read())
+            shared_keys = data.append(new_entry)
+        else:
+            shared_keys = [new_entry]
+        with open(globals.SHARED_KEYS, "wt") as file:
+            file.write(json.dumps(shared_keys))
+
+    def load_shared_keys(self) -> dict:
+        dict = {}
+        if globals.SHARED_KEYS.exists():
+            with open(globals.SHARED_KEYS, "rt") as file:
+                data: list = json.loads(file.read())
+            for folder_path, enc_key, nonce in data:
+                key_bytes = bytes.fromhex(enc_key)
+                nonce_bytes = bytes.fromhex(nonce)
+                dec_key_bytes = self.file_crypt.decrypt_key(key_bytes, nonce_bytes)
+                file_crypt = FileCryptography(key=dec_key_bytes)
+                servcoms = ServComs(self.server_location, hash_key_to_userID(dec_key_bytes))
+                dict[folder_path] = file_crypt, servcoms
+        return dict
 
 
 def replace_key_from_backup(shares, username, new_pw):

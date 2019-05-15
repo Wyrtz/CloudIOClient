@@ -55,6 +55,15 @@ class test_file_cryptography(unittest.TestCase):
         dec_name = self.file_crypt.decrypt_relative_file_path(enc_name, name_nonce)
         self.assertEqual(dec_name, self.file_path)
 
+    def test_filecrypt_compare_method(self):
+        key1 = globals.generate_random_key()
+        key2 = globals.generate_random_key()
+        fc1 = FileCryptography(key1)
+        fc2 = FileCryptography(key1)
+        fc3 = FileCryptography(key2)
+        self.assertEqual(fc1, fc2)
+        self.assertNotEqual(fc1, fc3)
+
     def recover_enc_old_keys(self, enc_old_keys):
         for ct_nonce_pair in enc_old_keys:
             ct = ct_nonce_pair[0]

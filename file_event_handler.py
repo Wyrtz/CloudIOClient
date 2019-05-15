@@ -37,7 +37,7 @@ class MyHandler(FileSystemEventHandler):
             return
         relative_path = abs_path.relative_to(globals.WORK_DIR)
         print("File deleted: " + str(relative_path))
-        self.client.delete_remote_file(relative_path)  # ToDO: does not work on multi-delete ?
+        self.client.delete_remote_file(relative_path)  # ToDO: does not work on multi-delete ? EURICA (?) fejler når en fil ikke har en enc path. Bare ignorer ? Eller er det bare fordi del af dir failer ? (JA OGSÅ)
 
     def on_modified(self, event):
         cur_time = time.time()

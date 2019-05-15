@@ -98,3 +98,11 @@ class TestServercoms(unittest.TestCase):
             self.unregister_user(userID1)
             self.unregister_user(userID2)
             self.unregister_user(userID3)
+
+    def test_equal_method(self):
+        sc1 = ServComs(self.serverIp, "1")
+        sc2 = ServComs(self.serverIp, "1")
+        sc3 = ServComs(self.serverIp, "2")
+
+        self.assertEqual(sc1, sc2)      # Same ip and id
+        self.assertNotEqual(sc1, sc3)   # different ip
