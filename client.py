@@ -1,3 +1,4 @@
+import json
 import pathlib as pl
 from hashlib import sha3_224
 from time import sleep
@@ -96,9 +97,17 @@ class Client:
         self.servercoms.register_deletion_of_file(enc_path_lst[0])
 
     def get_file_crypt_servercoms(self, path: pl.Path) -> (FileCryptography, ServComs):
-        path = path.absolute()
-        relative_path = path.relative_to(globals.WORK_DIR)
-        file_crypt, servercoms = self.folder_to_file_crypt_servercoms_dict.get(relative_path, self.folder_to_file_crypt_servercoms_dict.get("default"))
+        if path.is_absolute():
+            path.relative_to(globals.WORK_DIR)
+        folder_name = pl.Path(path.parts[0]) / path.parts[1]
+        # folder_name: pl.Path = list(path.parents)[-3]
+        # folder_name: pl.Path = path.relative_to(globals.WORK_DIR)
+        print(self.folder_to_file_crypt_servercoms_dict)
+        file_crypt, servercoms = self.folder_to_file_crypt_servercoms_dict.get(folder_name.as_posix(), self.folder_to_file_crypt_servercoms_dict.get("default"))
+        print()
+        print(folder_name)
+        print(file_crypt)
+        print(servercoms)
         return file_crypt, servercoms
 
     def update_server_file_list(self):
@@ -113,9 +122,12 @@ class Client:
     def create_shared_folder(self, folder_name: pl.Path, key: bytes):
         folder_path = folder_name.absolute()
         folder_path.mkdir()
+        rel_folder_path = folder_path.relative_to(globals.WORK_DIR)
+        # folder_name: pl.Path = list(rel_folder_path.parents)[-3]
         file_crypt = FileCryptography(key)
         servercoms = ServComs(self.server_location, hash_key_to_userID(key))
-        self.folder_to_file_crypt_servercoms_dict[folder_name] = (file_crypt, servercoms)
+        folder_name = pl.Path(rel_folder_path.parts[0]) / rel_folder_path.parts[1]  # ToDO: ugly plz fix ;(
+        self.folder_to_file_crypt_servercoms_dict[folder_name.as_posix()] = (file_crypt, servercoms)
 
     def get_local_file_list(self):
         """Return a list where each element is the string name of this file"""
@@ -166,8 +178,10 @@ class Client:
         except InvalidTag:
             print("Failed somehow!")
             return
-        folder_name: pl.Path = list(dec_file_rel_path.parents)[-2]
-        self.folder_to_file_crypt_servercoms_dict[folder_name] = (file_crypt, servercoms)
+        # folder_name: pl.Path = dec_file_rel_path.relative_to(globals.WORK_DIR)
+        # folder_name: pl.Path = list(dec_file_rel_path.parents)[-3]
+        folder_name = pl.Path(dec_file_rel_path.parts[0]) / dec_file_rel_path.parts[1]
+        self.folder_to_file_crypt_servercoms_dict[folder_name.as_posix()] = (file_crypt, servercoms)
         self.sync_files()
 
     def replace_password(self, old_pw, new_pw):  # TODO: Save shared_keys under new pw

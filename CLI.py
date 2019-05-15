@@ -116,7 +116,7 @@ class CLI:
             if command == "sync" or command == "s":
                 print("Synchronising...")
                 sync_dict = self.client.generate_sync_dict()
-                self.client.sync_files(sync_dict)
+                self.client.sync_files()
                 print("Synchronising done!")
             elif command == "ls" or command == "lf" or command == "local_files":
                 print("Local files:")
@@ -135,12 +135,13 @@ class CLI:
                 self.print_sync_dict(sync_dict)
             elif command == "csf" or command == "create_shared_folder":
                 folder_name = input("Name of shared folder:\n") # ToDo: check if legal folder name
-                relative_folder_path = pl.Path.joinpath(globals.FILE_FOLDER, folder_name)
-                if relative_folder_path.exists():
+                absolute_folder_path = pl.Path.joinpath(globals.FILE_FOLDER, folder_name)
+                if absolute_folder_path.exists():
                     print("Folder already exists!")
                     continue
-                key = self.generate_key_for_folder_shareing(relative_folder_path)
-                self.client.create_shared_folder(relative_folder_path, key)
+                key = self.generate_key_for_folder_shareing()
+                rel_path = pl.Path.relative_to(absolute_folder_path, globals.WORK_DIR)
+                self.client.create_shared_folder(rel_path, key)
                 print("Give this key to whoever you want to share the folder with. Send it safely!")
                 print(key.hex())
 
@@ -310,9 +311,10 @@ class CLI:
             print("\t", numb + 1, end=self.calculate_spacing(numb))
             print(element)
 
-    def generate_key_for_folder_shareing(self, relative_folder_path):
+    def generate_key_for_folder_shareing(self):
+        user = secrets.token_bytes(10)
         pw = secrets.token_bytes(32)  # 32 bytes long password
-        kd = keyderivation.KeyDerivation(relative_folder_path.as_posix())
+        kd = keyderivation.KeyDerivation(str(user))
         key = kd.derive_key(pw, False)
         return key
 
