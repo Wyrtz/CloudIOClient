@@ -211,6 +211,18 @@ class TestClient(unittest.TestCase):
         self.assertNotEqual(client2.servercoms, servcoms)   # Not defaulting
         self.assertTrue(pl.Path.exists(random_file_abs_path))  # Got the shared file (and thereby folder).
 
+    def test_shared_folders_persist(self):
+        key = globals.generate_random_key()
+        folder_name = pl.Path('forglem_mig_ai')
+        self.client.create_shared_folder(folder_name, key)
+        dict1 = self.client.folder_to_file_crypt_servercoms_dict
+
+        self.client.close_observers()
+
+        client2 = Client(self.username, self.pw)
+        dict2 = client2.folder_to_file_crypt_servercoms_dict
+        self.assertEqual(dict1, dict2, "Expect new client instance to have loaded the previous client's dict.")
+
     # def test_get_file_crypt(self):
     #     # Create 3 file_crypt from 3 keys:
     #     user_1 = "qwerty"
