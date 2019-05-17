@@ -46,7 +46,7 @@ class ServComs():
                                      verify=self.verify)
             response.raise_for_status()
 
-    def get_file(self, enc_file_name):
+    def get_file(self, enc_file_name: str):
         """Retrive enc_file_name from server and place it in tmp (ready for decryption)"""
         response = requests.get('https://' + self.serverLocation + '/get_file/' + enc_file_name + '/' + self.userID, verify=self.verify)
         if response.status_code != 404:

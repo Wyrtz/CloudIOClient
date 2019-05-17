@@ -67,6 +67,9 @@ class FileCryptography:
         return enc_file_path, additional_data
 
     def decrypt_relative_file_path(self, enc_file_path, nonce: bytes) -> pl.Path:
+        enc_file_path = pl.Path(enc_file_path)
+        if enc_file_path.suffix != ".cio":
+            raise TypeError
         enc_file_path = pl.Path(enc_file_path).stem
         enc_file_name = bytes.fromhex(enc_file_path)
         decrypted_file_byte_path: bytes = self.aesgcm.decrypt(
@@ -74,18 +77,19 @@ class FileCryptography:
             enc_file_name,
             associated_data=None)
         decrypted_file_path = decrypted_file_byte_path.decode(encoding='utf-8')
+        if ".." in decrypted_file_path.split("/"):
+            raise PermissionError("Not allowed to ascend folder structure! Don't trust the sender of this file D:")
         return pl.Path(decrypted_file_path)
 
     def decrypt_file(self, file_path, additional_data):
-        """Decrypt file_name and return name of the decrypted file"""
-        if file_path.suffix != ".cio":
-            raise TypeError
-        enc_file_name = file_path.stem
-        byte_file_name = bytes.fromhex(enc_file_name)
-        dec_file_name = self.aesgcm.decrypt(
-            bytes.fromhex(additional_data['nonce1']),
-            byte_file_name,
-            associated_data=None).decode('utf-8')
+        """Decrypt and create file, retun path of decrypted file"""
+        # enc_file_name = file_path.stem
+        # byte_file_name = bytes.fromhex(enc_file_name)
+        # dec_file_name: str = self.aesgcm.decrypt(
+        #     bytes.fromhex(additional_data['nonce1']),
+        #     byte_file_name,
+        #     associated_data=None).decode('utf-8')
+        dec_file_name = self.decrypt_relative_file_path(file_path, bytes.fromhex(additional_data['nonce1']))
         dec_file_path = pl.Path.joinpath(globals.WORK_DIR, dec_file_name)
         if dec_file_path.exists():
             last_mod_time_c = dec_file_path.stat().st_mtime

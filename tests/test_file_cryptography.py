@@ -64,6 +64,12 @@ class test_file_cryptography(unittest.TestCase):
         self.assertEqual(fc1, fc2)
         self.assertNotEqual(fc1, fc3)
 
+    def test_illegal_file_path_decryption(self):
+        nonce = globals.generate_random_nonce()
+        file_path = pl.Path(pl.Path.cwd() / "..")
+        enc_file_path = self.file_crypt.encrypt_relative_file_path(file_path, nonce)
+        self.assertRaises(PermissionError, self.file_crypt.decrypt_relative_file_path, enc_file_path, nonce)
+
     def recover_enc_old_keys(self, enc_old_keys):
         for ct_nonce_pair in enc_old_keys:
             ct = ct_nonce_pair[0]

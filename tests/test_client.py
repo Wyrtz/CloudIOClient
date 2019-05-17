@@ -1,5 +1,6 @@
 import os
 import pathlib as pl
+import shutil
 import unittest
 from time import sleep
 
@@ -29,15 +30,22 @@ class TestClient(unittest.TestCase):
         self.client = Client(username=self.username, password=self.pw, server_location=self.serverIp)
 
     def tearDown(self):
-        self.ste.recover_resources()
-        for file in self.random_files_list:
-            if pl.Path.exists(file):
-                if pl.Path.is_dir(file):
-                    pl.Path.rmdir(file)
-                else:
-                    pl.Path.unlink(file)
-        globals.clear_tmp()
         self.client.close_observers()
+        self.ste.recover_resources()
+        notDone = True
+        while notDone:
+            try:
+                for file in self.random_files_list:
+                    if pl.Path.exists(file):
+                        if pl.Path.is_dir(file):
+                            pl.Path.rmdir(file)
+                        else:
+                            pl.Path.unlink(file)
+            except PermissionError:
+                sleep(0.1)
+                continue
+            notDone = False
+        globals.clear_tmp()
         self.unregister_user(self.client.userID)
 
     def test_created_file_is_uploaded(self):
@@ -182,7 +190,7 @@ class TestClient(unittest.TestCase):
         retrived_rel_path = filecrypt.decrypt_relative_file_path(enc_rel_path, bytes.fromhex(nonce))
         self.assertEqual(retrived_rel_path, random_file_abs_path.relative_to(globals.WORK_DIR))
 
-    def test_can_add_shared_folder(self):  # ToDo: JEG FAILER!
+    def test_can_add_shared_folder(self):
         share_key = globals.generate_random_key()  # Get a random key
         test_folder_name = pl.Path('test')
         test_folder_abs_path = globals.FILE_FOLDER.joinpath(test_folder_name)
@@ -203,6 +211,7 @@ class TestClient(unittest.TestCase):
         kd = keyderivation.KeyDerivation(other_username)
         key_client2 = kd.derive_key(other_pw, False)
         kd.store_hash_of_key(key_client2)  # Now we're another client
+        globals.SHARED_KEYS.unlink()
 
         client2 = Client(other_username, other_pw)
         client2.add_share_key(share_key)
@@ -210,6 +219,7 @@ class TestClient(unittest.TestCase):
         self.assertNotEqual(client2.file_crypt, filecrypt)  # Not defaulting
         self.assertNotEqual(client2.servercoms, servcoms)   # Not defaulting
         self.assertTrue(pl.Path.exists(random_file_abs_path))  # Got the shared file (and thereby folder).
+        client2.close_observers()
 
     def test_shared_folders_persist(self):
         key = globals.generate_random_key()
@@ -226,6 +236,19 @@ class TestClient(unittest.TestCase):
         dict2 = client2.folder_to_file_crypt_servercoms_dict
         client2.close_observers()
         self.assertEqual(dict1, dict2, "Expect new client instance to have loaded the previous client's dict.")
+
+    # def test_deletion_of_folder(self):
+    #     """Ensure that deleting a folder also deletes all files under that folder on the server"""
+    #     self.assertTrue(len(globals.SERVER_FILE_DICT) == 0)
+    #     dir_path = pl.Path.joinpath(globals.FILE_FOLDER, "test_folder")
+    #     os.mkdir(dir_path)
+    #     file1_path = self.create_random_file(dir_path)
+    #     file2_path = self.create_random_file(dir_path)
+    #     # os.rmdir(dir_path)
+    #     sleep(self.sleep_time)
+    #     shutil.rmtree(dir_path)
+    #     sleep(self.sleep_time)
+    #     self.assertEqual(len(globals.SERVER_FILE_DICT), 0, f"Server file list not empty! contains {globals.SERVER_FILE_DICT.keys()}")
 
 
     def create_random_file(self, path=globals.FILE_FOLDER):

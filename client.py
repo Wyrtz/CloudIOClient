@@ -9,6 +9,7 @@ from watchdog.observers import Observer
 from ServerComs import ServComs
 from file_event_handler import MyHandler
 from resources import globals
+from resources.globals import FileInfo
 from security import keyderivation, secretsharing
 from security.filecryptography import FileCryptography
 
@@ -66,7 +67,7 @@ class Client:
         relative_path = file_path.relative_to(globals.WORK_DIR)
         relative_enc_path = enc_file_path.relative_to(globals.TEMPORARY_FOLDER)
         print("File\"" + file_path.stem + "\"send successfully!")
-        fio = globals.FileInfo(relative_path, file_name_nonce, relative_enc_path, file_path.stat().st_mtime)
+        fio = globals.FileInfo(relative_path, file_name_nonce, relative_enc_path.as_posix(), file_path.stat().st_mtime)
         globals.SERVER_FILE_DICT[fio.path] = fio
 
     def get_file(self, file_name):
@@ -74,11 +75,12 @@ class Client:
            If the candidate is valid and newer, keep it."""
         file_crypt, servercoms = self.get_file_crypt_servercoms(file_name)
         globals.DOWNLOADED_FILE_QUEUE.append(file_name)
-        enc_file_name_list = [fio.enc_path for fio in globals.SERVER_FILE_DICT.values() if fio.path == file_name]
-        if len(enc_file_name_list) != 1:
-            raise NotImplementedError("Zero, two or more files on server derived from the same name", enc_file_name_list)
+        fio: FileInfo = globals.SERVER_FILE_DICT.get(file_name, None)
+        if not fio:
+            print("File not found on server")
+            return
         try:
-            tmp_enc_file_path, additional_data = servercoms.get_file(str(enc_file_name_list[0]))
+            tmp_enc_file_path, additional_data = servercoms.get_file(fio.enc_path)
         except FileNotFoundError:
             print("File not found on server.")
             return
@@ -86,12 +88,14 @@ class Client:
         pl.Path.unlink(tmp_enc_file_path)
 
     def delete_remote_file(self, file_rel_path: pl.Path):
-        enc_path_lst = [fio.enc_path for fio in globals.SERVER_FILE_DICT.values() if fio.path == file_rel_path]
-        if len(enc_path_lst) != 1:
-            raise NotImplementedError(f"List is not 1 long! Contains: {enc_path_lst}")
+        fio: FileInfo = globals.SERVER_FILE_DICT.get(file_rel_path, None)
+        if not fio:
+            print("File/dir not on server")
+            return
         globals.SERVER_FILE_DICT.pop(file_rel_path)
         _, coms = self.get_file_crypt_servercoms(file_rel_path)
-        coms.register_deletion_of_file(enc_path_lst[0])
+        coms.register_deletion_of_file(fio.enc_path)
+        print("File deleted: " + str(fio.path))
 
     def get_file_crypt_servercoms(self, file_path: pl.Path) -> (FileCryptography, ServComs):
         if file_path.is_absolute():

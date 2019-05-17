@@ -1,7 +1,9 @@
 import pathlib as pl
+import platform
 import time
+import os
 
-from watchdog.events import FileSystemEventHandler
+from watchdog.events import FileSystemEventHandler, FileSystemEvent, FileDeletedEvent, DirDeletedEvent
 
 from resources import globals
 
@@ -13,12 +15,12 @@ class MyHandler(FileSystemEventHandler):
         self.client = client
         self.new_files = {}
 
-    def on_any_event(self, event):
+    def on_any_event(self, event: FileSystemEvent):
         """Print any received event to console"""
         #print(f'event type: {event.event_type}  path : {event.src_path}')
         pass
 
-    def on_created(self, event):
+    def on_created(self, event: FileSystemEvent):
         """Send newly created file to the server"""
         file_path = pl.Path(event.src_path)
         if file_path.is_dir() or file_path.name.startswith(".goutputstream-"):
@@ -31,18 +33,26 @@ class MyHandler(FileSystemEventHandler):
         self.new_files[relative_file_path] = time.time()
         self.client.send_file(file_path)
 
-    def on_deleted(self, event):
+    def on_deleted(self, event: FileSystemEvent):
         abs_path = pl.Path(event.src_path)
-        if abs_path.is_dir() or abs_path.name.startswith(".goutputstream-"):
+        if isinstance(event, DirDeletedEvent) or (platform.system() == "Windows" and abs_path.suffix == ""):
+            server_dict_copy = globals.SERVER_FILE_DICT.copy()
+            for filePath in server_dict_copy.keys():
+                try:
+                    rel_path = pl.Path.relative_to(abs_path, globals.WORK_DIR)
+                    filePath.relative_to(rel_path)
+                    self.client.delete_remote_file(filePath)
+                except ValueError:
+                    pass
+        if abs_path.name.startswith(".goutputstream-"):
             return
         relative_path = abs_path.relative_to(globals.WORK_DIR)
-        print("File deleted: " + str(relative_path))
-        self.client.delete_remote_file(relative_path)  # ToDO: does not work on multi-delete ? EURICA (?) fejler når en fil ikke har en enc path. Bare ignorer ? Eller er det bare fordi del af dir failer ? (JA OGSÅ)
+        self.client.delete_remote_file(relative_path)
 
-    def on_modified(self, event):
+    def on_modified(self, event: FileSystemEvent):
         cur_time = time.time()
         file_path = pl.Path(event.src_path)
-        if file_path.is_dir() or file_path.name.startswith(".goutputstream-"):
+        if file_path.is_dir() or not file_path.is_file() or file_path.name.startswith(".goutputstream-"):
             return
         relative_file_path = file_path.relative_to(globals.WORK_DIR)
         if relative_file_path in self.new_files:
@@ -53,22 +63,19 @@ class MyHandler(FileSystemEventHandler):
                 self.new_files.pop(relative_file_path)
         print("File modified:" + str(relative_file_path))
         # Get the nonce used for the filename such that the filename stays the same:
-        file_name_nonce = [fio.nonce for fio in globals.SERVER_FILE_DICT.values() if fio.path == relative_file_path]
-        if len(file_name_nonce) != 1:
-            print("How could this happen D: ??")
-            error_message = f'Number of nonces match is not 1: {file_name_nonce}'
-            raise NotImplementedError(error_message)
-        file_name_nonce = file_name_nonce[0]
+        fio = globals.SERVER_FILE_DICT.get(relative_file_path, None)
+        if not fio:  # File not on server yet
+            file_name_nonce = globals.generate_random_nonce()
+        else:
+            file_name_nonce = fio.nonce
         self.client.send_file(file_path, file_name_nonce=file_name_nonce)
 
-    def on_moved(self, event):
+    def on_moved(self, event: FileSystemEvent):
         file_path = pl.Path(event.src_path)
         relative_file_path = file_path.relative_to(globals.WORK_DIR)
         print("File moved:", str(relative_file_path))
         print("Not implemented!!")
 
     # Todo: on_ rename file ?? (move event ??) (Saving file on unix can be a move event)
-    # TODO: Deleting folders.
-    # TODO: Delete doesn't work all the time.
     # TODO: CLI's cmd 'df _' on only local.
     # TODO: Fix get_file - Make observers turn off temporarily.
