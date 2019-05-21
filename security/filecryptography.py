@@ -83,12 +83,6 @@ class FileCryptography:
 
     def decrypt_file(self, file_path, additional_data):
         """Decrypt and create file, retun path of decrypted file"""
-        # enc_file_name = file_path.stem
-        # byte_file_name = bytes.fromhex(enc_file_name)
-        # dec_file_name: str = self.aesgcm.decrypt(
-        #     bytes.fromhex(additional_data['nonce1']),
-        #     byte_file_name,
-        #     associated_data=None).decode('utf-8')
         dec_file_name = self.decrypt_relative_file_path(file_path, bytes.fromhex(additional_data['nonce1']))
         dec_file_path = pl.Path.joinpath(globals.WORK_DIR, dec_file_name)
         if dec_file_path.exists():

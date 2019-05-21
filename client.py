@@ -159,7 +159,12 @@ class Client:
 
     def backup_key(self, password, required_share_amount_to_recover: int, share_amount: int) -> list:
         key = self.kd.derive_key(password)
-        return secretsharing.split_secret(key, required_share_amount_to_recover - 1, share_amount)
+        try:
+            return secretsharing.split_secret(key, required_share_amount_to_recover - 1, share_amount)
+        except AssertionError:
+            print("Invalid amount of shares required to recover from:")
+            print("This Secret Sharing scheme implementation supports at max 127 shares to recover from.")
+            return []
 
     def add_share_key(self, key: bytes):
         servercoms = ServComs(self.server_location, hash_key_to_userID(key))

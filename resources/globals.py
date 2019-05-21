@@ -72,6 +72,7 @@ def is_safe_folder_name(folder_name: str) -> bool:
         return False
     return True
 
+
 PROJECT_NAME = "CloudIOClient"
 PROJECT_NAME = PROJECT_NAME
 WORK_DIR = get_CloudIOClient_path()

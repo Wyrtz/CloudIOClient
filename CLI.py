@@ -25,7 +25,7 @@ class CLI:
 
     def __init__(self):
         colorama.init(autoreset=True)
-        self.divider = "*"*40
+        self.divider = "*" * 40
         self.start_user_interface()
 
     def start_user_interface(self):
@@ -104,19 +104,44 @@ class CLI:
             self.clear_screen()
             if self.get_or_delete_avaliable:
                 if command == "gf" or command == "get_file":
-                    success = self.interact_with_server(commands, 'gf')
+                    try:
+                        idx = int(commands[1])
+                    except ValueError:
+                        print("Could not interpret second entry as a number.")
+                        continue
+                    except IndexError:
+                        print("To use this command (gf) provide a number as part of the command.")
+                        continue
+                    try:
+                        file_rel_path = self.name_list[idx - 1]  # One-indexing -> zero-indexing
+                    except IndexError:
+                        print("The inputted number is invalid.")
+                        continue
+                    success = self.interact_with_server('gf', file_rel_path)
                     if not success:
                         continue
 
                 if command == 'df' or command == "del" or command == 'delete_file':
-                    success = self.interact_with_server(commands, 'df')
+                    try:
+                        idx = int(commands[1])
+                    except ValueError:
+                        print("Could not interpret second entry as a number.")
+                        continue
+                    except IndexError:
+                        print("To use this command (gf) provide a number as part of the command.")
+                        continue
+                    try:
+                        file_rel_path = self.name_list[idx - 1]  # One-indexing -> zero-indexing
+                    except IndexError:
+                        print("The inputted number is invalid.")
+                        continue
+                    success = self.interact_with_server('df', file_rel_path)
                     if not success:
                         continue
 
             self.get_or_delete_avaliable = False
             if command == "sync" or command == "s":
                 print("Synchronising...")
-                sync_dict = self.client.generate_sync_dict()
                 self.client.sync_files()
                 print("Synchronising done!")
             elif command == "ls" or command == "lf" or command == "local_files":
@@ -126,13 +151,13 @@ class CLI:
                 self.get_or_delete_avaliable = True
                 print("Remote files:")
                 self.print_remote_files()
-            elif command == "diff" or command == "d":
+            elif command == "diff" or command == "d":  # TODO: Run past Sofus
                 self.get_or_delete_avaliable = True
-                # self.print_diff_to_server()
-                self.print_diff_to_server()
-            elif command == "ss" or command == "sync_status":
+                self.name_list = self.print_diff_to_server()
+            elif command == "ss" or command == "sync_status":  # TODO: Run past Sofus
                 self.get_or_delete_avaliable = True
                 sync_dict = self.client.generate_sync_dict()
+                self.name_list = list(sync_dict)
                 self.print_sync_dict(sync_dict)
             elif command == "csf" or command == "create_shared_folder":
                 folder_name = input("Name of shared folder:\n")
@@ -179,40 +204,29 @@ class CLI:
                 input("Failed to replace password. Press enter to continue.")
                 self.clear_screen()
 
-    def interact_with_server(self, commands, command):
-        error_message = f"{Fore.RED}Provide what file (number) you want"
-        if not len(commands) == 2:
-            print(f'{Fore.RED}ERROR, 2 arguments required (command, number)')
-            self.get_or_delete_avaliable = False
-            return False
-        number = commands[1]
-        try:
-            number = int(number)
-        except ValueError:
-            print(error_message)
-            return False
-        try:
-            key = list(globals.SERVER_FILE_DICT)[number - 1]
-            requested_file = globals.SERVER_FILE_DICT[key].path  # Assume is in the dict.
-        except IndexError:
-            print(error_message)
-            return False
+    def interact_with_server(self, command, file_rel_path: pl.Path):
+        error_message = f"{Fore.RED}Provide what file (number) you want"  # TODO: Remove?
+        exists_remotely = file_rel_path in list(globals.SERVER_FILE_DICT)
+        exists_locally = pl.Path.exists(file_rel_path)
 
-        if command == "gf" or command == "get":
+        if command == "gf" or command == "get":  # TODO: Run by Sofus
+            if not exists_remotely:
+                print("File doesn't exist remotely.")
+                return True
             print("Getting file...")
-            self.client.get_file(requested_file)   # ToDO: can run "get file" on files we already have, and requests for files the server does not have is wierd!
+            self.client.get_file(file_rel_path)
             return True
 
-        if command == 'df' or command == "del":
-            if pl.Path.exists(requested_file):
-                answer = input("Delete local file as well ? (y,n)")
+        if command == 'df' or command == "del":  # TODO: Run by Sofus
+            if exists_locally:
+                answer = input("Delete local file? (y,n)")
                 answer = answer.lower()
                 if answer == "y" or answer == "yes":
-                    pl.Path.unlink(requested_file)
-                    return True
-            print("Deleting file...")
-            print(requested_file)
-            self.client.delete_remote_file(requested_file)  # ToDO: not done! If file is on server, not on client, fucks up (what file to ask for del ?) # TODO: See if this TODO is TODONE
+                    pl.Path.unlink(file_rel_path)
+            if exists_remotely:
+                print("Deleting file on server...")
+                print(file_rel_path.as_posix())
+                self.client.delete_remote_file(file_rel_path)
             return True
 
     def replace_pw_using_shares(self):
@@ -303,15 +317,16 @@ class CLI:
             print("\t(Server up to date)")
         else:
             print("Files not on server:")
-            self.print_list(files_not_on_server)
+            self.print_list(files_not_on_server, len(files_not_on_client))
+        return files_not_on_client + files_not_on_server
 
-    def print_list(self, list_names_to_print):
+    def print_list(self, list_names_to_print, offset=0):
         """Prints a given list, with each line enumerated"""
         # list_to_print_str = [str(x) for x in list_names_to_print]
         # longest_element_length = len(max(list_to_print_str, key=len))
         print(f"{Back.BLACK}\t #{self.calculate_spacing(1)}File Name")
         for numb, element in enumerate(list_names_to_print):
-            print("\t", numb + 1, end=self.calculate_spacing(numb))
+            print("\t", numb + 1 + offset, end=self.calculate_spacing(numb))
             print(element)
 
     def add_shared_folder(self):
@@ -351,6 +366,9 @@ class CLI:
             return
         password = getpass("Type in your password to confirm.")
         shares = self.client.backup_key(password, to_recover_from, total)
+        if len(shares) == 0:
+            print("No shares were produced.")
+            return
         print("These are your shares:")
         for share in shares:
             print(share)
@@ -424,5 +442,4 @@ Available commands:
 
 
 if __name__ == "__main__":
-    # serverIP = 'wyrnas.myqnapcloud.com:8000'
     cli = CLI()

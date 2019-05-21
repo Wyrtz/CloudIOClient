@@ -101,9 +101,6 @@ class Polynomial:
         assert degree < 128, "Degree can at most be 127"
         self.coefficients = [FInt(secret, prime)] + [FInt(int.from_bytes(os.urandom(32), byteorder) % prime,
                                                           prime) for _ in range(degree)]
-        while self.coefficients.__contains__(FInt(0, prime)):  # It would be rather unfortunate if all coefs. were zero.
-            index_of_zero = self.coefficients.index(FInt(0, prime))  # TODO: bad to enforce no coefs. are zero?
-            self.coefficients[index_of_zero] = FInt(int.from_bytes(os.urandom(32), byteorder) % prime, prime)
 
     def evaluate_point(self, x_val: int) -> (int, int):
         y_val = FInt(0, self.prime)
