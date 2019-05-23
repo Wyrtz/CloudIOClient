@@ -84,8 +84,10 @@ class Client:
         except FileNotFoundError:
             print("File not found on server.")
             return
+        self.close_observers()
         file_crypt.decrypt_file(tmp_enc_file_path, additional_data=additional_data)
         pl.Path.unlink(tmp_enc_file_path)
+        self.start_observing()
 
     def delete_remote_file(self, file_rel_path: pl.Path):
         fio: FileInfo = globals.SERVER_FILE_DICT.get(file_rel_path, None)
@@ -254,4 +256,18 @@ class Client:
 
 def replace_key_from_backup(shares, username, new_pw):
     key = secretsharing.recover_secret(shares)
-    keyderivation.KeyDerivation(username).replace_pw_from_key(key, new_pw)
+    old_file_crypt = FileCryptography(key=key)
+    new_file_crypt = keyderivation.KeyDerivation(username).replace_pw_from_key(key, new_pw)
+    # Encrypt all shared folders keys under the new key
+    new_shared_keys = []
+    if globals.SHARED_KEYS.exists():
+        with open(globals.SHARED_KEYS, "rt") as file:
+            data: list = json.load(file.read())
+        for folder_path, enc_key, nonce in data:
+            key = old_file_crypt.decrypt_key(enc_key, nonce)
+            new_nonce = globals.generate_random_nonce()
+            new_enc_key = new_file_crypt.encrypt_key(key, new_nonce)
+            new_entry = (folder_path, new_enc_key.hex(), new_nonce.hex())
+            new_shared_keys.append(new_entry)
+        with open(globals.SHARED_KEYS, "wt") as file:
+            file.write(json.dumps(new_shared_keys))

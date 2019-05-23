@@ -374,6 +374,7 @@ class CLI:
             print(share)
         print("When you have written these down or distributed them press enter.")
         input('Remember; these should only be given to parties you can trust not to collaborate against you.')
+        self.clear_screen()
 
     def print_sync_dict(self, sync_dict: dict):
         """Prints a synchronisation dictionary as produced by "generate_sync_dict"""
