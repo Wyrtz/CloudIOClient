@@ -1,7 +1,6 @@
 import pathlib as pl
 import platform
 import time
-import os
 
 from watchdog.events import FileSystemEventHandler, FileSystemEvent, FileDeletedEvent, DirDeletedEvent
 
@@ -9,24 +8,39 @@ from resources import globals
 
 
 class MyHandler(FileSystemEventHandler):
-    """Custom Handling FileSystemEvents"""
+    """Custom handler for responding to FileSystemEvents"""
 
     def __init__(self, client):
+        """
+        Args:
+            client: the client to report events to
+        """
         self.client = client
         self.new_files = {}
 
     def on_any_event(self, event: FileSystemEvent):
-        """Print any received event to console"""
-        #print(f'event type: {event.event_type}  path : {event.src_path}')
+        """
+        Print any received event to console
+
+        Args:
+            event: a FileSystemEvent created by the OS.
+        """
+        # print(f'event type: {event.event_type}  path : {event.src_path}')
         pass
 
     def on_created(self, event: FileSystemEvent):
-        """Send newly created file to the server"""
+        """
+        Send newly created file to the server
+
+        Args:
+            event:a FileSystemEvent created by the OS.
+        """
         file_path = pl.Path(event.src_path)
         if file_path.is_dir() or file_path.name.startswith(".goutputstream-"):
             return
         relative_file_path = file_path.relative_to(globals.WORK_DIR)
         print("File created: " + str(relative_file_path))
+        # Check if the just created file was downloaded (then don't send it back)
         if relative_file_path in globals.DOWNLOADED_FILE_QUEUE:
             globals.DOWNLOADED_FILE_QUEUE.remove(relative_file_path)
             return
@@ -34,6 +48,13 @@ class MyHandler(FileSystemEventHandler):
         self.client.send_file(file_path)
 
     def on_deleted(self, event: FileSystemEvent):
+        """
+        Delete a file on the server, now that is has been deleted on the client
+
+        Args:
+            event: a FileSystemEvent created by the OS.
+
+        """
         abs_path = pl.Path(event.src_path)
         if isinstance(event, DirDeletedEvent) or (platform.system() == "Windows" and abs_path.suffix == ""):
             server_dict_copy = globals.SERVER_FILE_DICT.copy()
@@ -50,6 +71,13 @@ class MyHandler(FileSystemEventHandler):
         self.client.delete_remote_file(relative_path)
 
     def on_modified(self, event: FileSystemEvent):
+        """
+        Handle modification of a file by sending the new version to the server
+
+        Args:
+            event: a FileSystemEvent created by the OS.
+
+        """
         cur_time = time.time()
         file_path = pl.Path(event.src_path)
         if file_path.is_dir() or not file_path.is_file() or file_path.name.startswith(".goutputstream-"):
@@ -71,6 +99,11 @@ class MyHandler(FileSystemEventHandler):
         self.client.send_file(file_path, file_name_nonce=file_name_nonce)
 
     def on_moved(self, event: FileSystemEvent):
+        """
+        Not implemented, do not use!
+        Args:
+            event: a FileSystemEvent created by the OS.
+        """
         file_path = pl.Path(event.src_path)
         relative_file_path = file_path.relative_to(globals.WORK_DIR)
         print("File moved:", str(relative_file_path))

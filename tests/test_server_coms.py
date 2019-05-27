@@ -11,7 +11,13 @@ from tests import setup_test_environment as ste
 
 class TestServercoms(unittest.TestCase):
 
-    def unregister_user(self, userID):
+    def unregister_user(self, userID: str):
+        """
+        Method for unregistering a user on the server after testing
+
+        Args:
+            userID: the user to unregister
+        """
         requests.post('https://' + self.serverIp + '/unregister/' + userID, verify=False)
 
     def setUp(self):
@@ -28,9 +34,13 @@ class TestServercoms(unittest.TestCase):
         self.nonce2 = globals.generate_random_nonce()
 
     def test_send_file(self):
-        self.send_file(self.nonce1, self.nonce2)
+        """Test that sending a file does not raise anything and that files are created"""
+        enc_file, add_data = self.send_file(self.nonce1, self.nonce2)
+        self.assertNotEqual(len(add_data.keys()), 0)
+
 
     def test_uploaded_file_in_file_list(self):
+        """Test that files are uploaded after creation"""
         # Send file
         enc_file_path, additional_data = self.send_file(self.nonce1, self.nonce2)
         enc_file_name = enc_file_path.name
@@ -39,6 +49,7 @@ class TestServercoms(unittest.TestCase):
         self.assertIn(enc_file_name, [x[0] for x in file_list], "File not on the server!")
 
     def test_receive_send_file(self):
+        """Test the ability to get a file from the server"""
         with open(self.file_path, 'rb') as file:
             file_content = file.read()
         enc_file_name = self.enc.encrypt_relative_file_path(self.relative_file_path, self.nonce1)
@@ -50,20 +61,8 @@ class TestServercoms(unittest.TestCase):
             received_content = file.read()
         self.assertEqual(file_content, received_content, "Files differ!")
 
-    def send_file(self, nonce1, nonce2, serverComs = None):
-        if not serverComs:
-            serverComs = self.serverComs
-        enc_file_path, additional_data = self.enc.encrypt_file(self.file_path, nonce1, nonce2)
-        serverComs.send_file(enc_file_path, additional_data=additional_data)
-        return enc_file_path, additional_data
-
-    def tearDown(self):
-        self.ste.recover_resources()
-        self.serverComs.register_deletion_of_file(self.enc.encrypt_relative_file_path(self.relative_file_path, self.nonce1))
-        self.unregister_user(self.userID)
-        globals.clear_tmp()
-
     def test_multiple_users_cannot_access_each_others_files(self):
+        """test multiple users cannot access other peoples data"""
         userID1 = 'aaaabbbbccccdddd'  # Create three users
         userID2 = 'aaaccccbbbddd'
         userID3 = 'bbbaaadddccccc'
@@ -100,9 +99,36 @@ class TestServercoms(unittest.TestCase):
             self.unregister_user(userID3)
 
     def test_equal_method(self):
+        """Test comparison of ServerComs (the __eq__ method)"""
         sc1 = ServComs(self.serverIp, "1")
         sc2 = ServComs(self.serverIp, "1")
         sc3 = ServComs(self.serverIp, "2")
 
         self.assertEqual(sc1, sc2)      # Same ip and id
         self.assertNotEqual(sc1, sc3)   # different ip
+
+    def send_file(self, name_nonce: bytes, data_nonce: bytes, serverComs: ServComs = None) -> (pl.Path, dict):
+        """
+        Helper method for sending a file
+
+        Args:
+            name_nonce: nonce for encrypting the name
+            data_nonce: nonce for encrypting the data (content of a file)
+            serverComs: the servercoms to use to send the file
+
+        Returns:
+            pl.Path: the path of the encrypted file
+            dict: a dict containing the additional data
+        """
+        if not serverComs:
+            serverComs = self.serverComs
+        enc_file_path, additional_data = self.enc.encrypt_file(self.file_path, name_nonce, data_nonce)
+        serverComs.send_file(enc_file_path, additional_data=additional_data)
+        return enc_file_path, additional_data
+
+    def tearDown(self):
+        self.ste.recover_resources()
+        self.serverComs.register_deletion_of_file(
+            self.enc.encrypt_relative_file_path(self.relative_file_path, self.nonce1))
+        self.unregister_user(self.userID)
+        globals.clear_tmp()

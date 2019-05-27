@@ -14,8 +14,14 @@ from tests import setup_test_environment as ste
 
 
 class TestClient(unittest.TestCase):
+    """Class for unittesting the client.py module"""
 
-    def unregister_user(self, userID):
+    def unregister_user(self, userID: str) -> None:
+        """
+        Method for unregistering (test) users when done testing
+        Args:
+            userID: The ID of the user to unregister on the server
+        """
         requests.post('https://' + self.serverIp + '/unregister/' + userID, verify=False)
 
     def setUp(self):
@@ -122,6 +128,7 @@ class TestClient(unittest.TestCase):
         self.assertEqual(local_file_data, remote_file_data, "Files not equal!")
 
     def test_can_backup_key_then_replace(self):
+        """Test the ability to backup a key and then restore the key with the shares"""
         shares = self.client.backup_key(self.pw, 10, 20)
         self.assertTrue(len(shares) == 20)
         self.assertRaises(AssertionError, client.replace_key_from_backup, shares[:9], self.username, 'wertyuisdfgh')
@@ -130,8 +137,10 @@ class TestClient(unittest.TestCase):
         new_pw = 'wertyuiosdfghj'
         client.replace_key_from_backup(shares[3:15], self.username, new_pw)
         self.client.kd.derive_key(new_pw)
+        # Todo: done ?? Assert nothing after replacing key ?
 
     def test_replacing_pw_syncs_files(self):
+        """Test that replacing the passwords makes all the files available under the new password (they are synced)"""
         l1 = list(globals.SERVER_FILE_DICT)
         self.assertTrue(l1 == [])
         rand_path1 = self.create_random_file().relative_to(globals.WORK_DIR)
@@ -150,6 +159,7 @@ class TestClient(unittest.TestCase):
             self.assertIn(path, l3)
 
     def test_filecrypt_and_servcoms_of_primary_key_is_retrievable(self):
+        """Test that a random path of a file leads to the default servercoms/filecrypt pair"""
         some_path = globals.FILE_FOLDER.joinpath('something').relative_to(globals.WORK_DIR)
         self.assertTrue('files/something' == some_path.as_posix(),
                         'expected "files/something" but was ' + some_path.as_posix())
@@ -158,10 +168,10 @@ class TestClient(unittest.TestCase):
         self.assertTrue(servcoms == self.client.servercoms)
 
     def test_filecrypt_and_servcoms_of_shared_key_is_retrievable(self):
-        '''
+        """
         Tests to see if, when we have created a folder to be shared, that when retrieving servcoms and filecrypt
         for the folder that we retrieve some that aren't default and that the servcoms is that of the shared key.
-        '''
+        """
         key = globals.generate_random_key()  # Get a random key
         test_folder_name = pl.Path('test')
         test_folder_abs_path = globals.FILE_FOLDER.joinpath(test_folder_name)
@@ -174,23 +184,25 @@ class TestClient(unittest.TestCase):
         self.assertFalse(servcoms == self.client.servercoms)  # Not default
         self.assertTrue(servcoms.userID == client.hash_key_to_userID(key))  # Correct ID
 
-    def test_shared_folders_are_use_right_key(self):
+    def test_shared_folders_use_the_right_key(self):
+        """Ensure that a new shared folder encrypts new files under the new key"""
         key = globals.generate_random_key()  # Get a random key
         test_folder_name = pl.Path('test')
         test_folder_abs_path = globals.FILE_FOLDER.joinpath(test_folder_name)
         test_folder_rel_path = test_folder_abs_path.relative_to(globals.WORK_DIR)
         self.client.create_shared_folder(test_folder_name, key)  # create the folder to be shared
         random_file_abs_path = self.create_random_file(test_folder_abs_path)
-        self.random_files_list.append(test_folder_abs_path)  # 4 teardown - remove the folder
+        self.random_files_list.append(test_folder_abs_path)  # for teardown - remove the folder
         filecrypt, servcoms = self.client.get_file_crypt_servercoms(test_folder_rel_path)
         sleep(self.sleep_time)
         file_list = servcoms.get_file_list()
         self.assertEqual(len(file_list), 1)
         enc_rel_path, nonce, _ = file_list[0]
-        retrived_rel_path = filecrypt.decrypt_relative_file_path(enc_rel_path, bytes.fromhex(nonce))
-        self.assertEqual(retrived_rel_path, random_file_abs_path.relative_to(globals.WORK_DIR))
+        retrieved_rel_path = filecrypt.decrypt_relative_file_path(enc_rel_path, bytes.fromhex(nonce))
+        self.assertEqual(retrieved_rel_path, random_file_abs_path.relative_to(globals.WORK_DIR))
 
     def test_can_add_shared_folder(self):
+        """Test the ability for another client to get the files from a shared folder"""
         share_key = globals.generate_random_key()  # Get a random key
         test_folder_name = pl.Path('test')
         test_folder_abs_path = globals.FILE_FOLDER.joinpath(test_folder_name)
@@ -222,6 +234,7 @@ class TestClient(unittest.TestCase):
         client2.close_observers()
 
     def test_shared_folders_persist(self):
+        """Test that shared folder (keys) are not lost when closing the client"""
         key = globals.generate_random_key()
         folder_name = pl.Path('forglem_mig_ai')
         test_folder_abs_path = globals.FILE_FOLDER.joinpath(folder_name)
@@ -237,22 +250,15 @@ class TestClient(unittest.TestCase):
         client2.close_observers()
         self.assertEqual(dict1, dict2, "Expect new client instance to have loaded the previous client's dict.")
 
-    # def test_deletion_of_folder(self):
-    #     """Ensure that deleting a folder also deletes all files under that folder on the server"""
-    #     self.assertTrue(len(globals.SERVER_FILE_DICT) == 0)
-    #     dir_path = pl.Path.joinpath(globals.FILE_FOLDER, "test_folder")
-    #     os.mkdir(dir_path)
-    #     file1_path = self.create_random_file(dir_path)
-    #     file2_path = self.create_random_file(dir_path)
-    #     # os.rmdir(dir_path)
-    #     sleep(self.sleep_time)
-    #     shutil.rmtree(dir_path)
-    #     sleep(self.sleep_time)
-    #     self.assertEqual(len(globals.SERVER_FILE_DICT), 0, f"Server file list not empty! contains {globals.SERVER_FILE_DICT.keys()}")
+    def create_random_file(self, path: pl.Path = globals.FILE_FOLDER) -> pl.Path:
+        """Create a random file in the file folder, give back the path
 
+        Args:
+            path: where to place the random file (default= files folder)
 
-    def create_random_file(self, path=globals.FILE_FOLDER):
-        """Create a random file in the file folder, give back the path"""
+        Returns:
+            pl.Path: the path of the just created random file
+        """
         random_file_name = os.urandom(8).hex() + ".test"
         random_file_path = pl.Path.joinpath(path, random_file_name)
         self.random_files_list.append(random_file_path)

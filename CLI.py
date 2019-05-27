@@ -1,7 +1,5 @@
 import os
 import platform
-import secrets
-import string
 from getpass import getpass
 from time import sleep
 
@@ -18,10 +16,11 @@ from client import Client
 import client
 from security import keyderivation
 from security.keyderivation import BadKeyException, BadPasswordSelected
-from security.secretsharing import FInt
+from security.secretsharing import FFInt
 
 
 class CLI:
+    """Class for a CLI user interface for the CloudIOclient"""
 
     def __init__(self):
         colorama.init(autoreset=True)
@@ -96,6 +95,7 @@ class CLI:
             self.client.close_observers()
 
     def start_user_input_loop(self):
+        """Runs after a user is logged in to show and perform various file actions"""
         while True:
             command_input = input("Command:")
             commands = command_input.split(" ")
@@ -186,6 +186,7 @@ class CLI:
             print(self.get_help())
 
     def replace_password(self):
+        """Method for replacing the users password"""
         self.clear_screen()
         print("Initiated password replacement.")
         old_pw = getpass("Type old password:")
@@ -204,7 +205,13 @@ class CLI:
                 input("Failed to replace password. Press enter to continue.")
                 self.clear_screen()
 
-    def interact_with_server(self, command, file_rel_path: pl.Path):
+    def interact_with_server(self, command: str, file_rel_path: pl.Path):
+        """Interpreting user commands related to manipulating listed files
+
+        Args:
+            command: input from the user on string form
+            file_rel_path: the file in question to either get or delete
+        """
         error_message = f"{Fore.RED}Provide what file (number) you want"  # TODO: Remove?
         exists_remotely = file_rel_path in list(globals.SERVER_FILE_DICT)
         exists_locally = pl.Path.exists(file_rel_path)
@@ -230,6 +237,7 @@ class CLI:
             return True
 
     def replace_pw_using_shares(self):
+        """Replace username and password from shares"""
         shares_input = self.get_shares_from_user()  # TODO: Fix bug (expects more than necesary.)
         has_new_pw = False
         while not has_new_pw:
@@ -252,6 +260,11 @@ class CLI:
                 print("Passwords didn't match. Try again.")
 
     def get_shares_from_user(self) -> list:
+        """Run the loop of acquiring shares for Shamirs Secret Sharing Scheme from the user
+
+        Returns:
+            list: list of lists, with each sublist containing a shares x,y coordinate and the number of shares #toDo: last part it contains ?
+        """
         shares_input = []
         amount_needed = -1
         while len(shares_input) != amount_needed:
@@ -268,7 +281,7 @@ class CLI:
                 raise KeyboardInterrupt
             try:
                 x = int(x)
-                y = FInt(int(y))
+                y = FFInt(int(y))
                 t = int(t)
             except ValueError:
                 print("Could not interpret the share as a share. Try inputting it again:")
@@ -286,6 +299,7 @@ class CLI:
         return shares_input
 
     def print_remote_files(self):
+        """Get the remote file list as per globals give it to print_list for printing"""
         enc_remote_file_list = self.client.servercoms.get_file_list()
         if len(enc_remote_file_list) == 0:
             print("\t(no files on server)")
@@ -294,13 +308,20 @@ class CLI:
             self.print_list(file_names_only)
 
     def print_local_files(self):
+        """Get the local file list and give it to print_list for printing"""
         self.local_file_list = self.client.get_local_file_list()
         if len(self.local_file_list) == 0:
             print("\t(no files locally)")
         else:
             self.print_list(self.local_file_list)
 
-    def print_diff_to_server(self):
+    def print_diff_to_server(self) -> list:
+        """
+        Get local and remote file list and print the unique files from each list
+
+        Returns:
+            list: a list containing the file names which are unique to either remote or local files
+        """
         local_file_list = self.client.get_local_file_list()
         self.client.update_server_file_list()
         remote_file_names = list(globals.SERVER_FILE_DICT)
@@ -321,15 +342,19 @@ class CLI:
         return files_not_on_client + files_not_on_server
 
     def print_list(self, list_names_to_print, offset=0):
-        """Prints a given list, with each line enumerated"""
-        # list_to_print_str = [str(x) for x in list_names_to_print]
-        # longest_element_length = len(max(list_to_print_str, key=len))
+        """Prints a given list, with each line enumerated
+
+        Args:
+            list_names_to_print: a list of the files to print
+            offset: the tab-space offset to be used (default= 0)
+        """
         print(f"{Back.BLACK}\t #{self.calculate_spacing(1)}File Name")
         for numb, element in enumerate(list_names_to_print):
             print("\t", numb + 1 + offset, end=self.calculate_spacing(numb))
             print(element)
 
     def add_shared_folder(self):
+        """Ask the user for a key on hex format to add it to the client"""
         hex_key = input("Input key:\n")
         try:
             key = bytes.fromhex(hex_key)
@@ -339,6 +364,7 @@ class CLI:
         self.client.add_share_key(key)
 
     def backup_password(self):
+        """Run user input loop for creating Shamir Secret Sharing Scheme for the password"""
         r1 = input("You are about to backup your password. Are you sure you want to do this?(y/n)")
         if r1 == 'n':
             return
@@ -364,7 +390,7 @@ class CLI:
             print("That's not a valid amount of shares to recover from.")
             print("Should be > 0 and < total amount of shares. Exiting backup.")
             return
-        password = getpass("Type in your password to confirm.")
+        password = getpass("Type in your password to confirm.") # ToDO: Check if this is the correct password ?!
         shares = self.client.backup_key(password, to_recover_from, total)
         if len(shares) == 0:
             print("No shares were produced.")
@@ -377,7 +403,11 @@ class CLI:
         self.clear_screen()
 
     def print_sync_dict(self, sync_dict: dict):
-        """Prints a synchronisation dictionary as produced by "generate_sync_dict"""
+        """Prints a synchronisation dictionary as produced by "generate_sync_dict
+
+        Args:
+            sync_dict: a dictionary of all the files to be printed and their assosiated data (see create_sync_dict)
+        """
         i = 0
         print(f"{Back.BLACK}\t #{self.calculate_spacing(1)}File Name")
         if len(sync_dict) == 0:
@@ -399,8 +429,12 @@ class CLI:
         print(f"{Back.RED}\tRed:\tServer version newer than client version")
         print(self.divider)
 
-    def clear_screen(self, print_logo=True):
-        """Clears the terminal no matter the OS"""
+    def clear_screen(self, print_logo: bool=True):
+        """Clears the terminal no matter the OS
+
+        Args:
+            print_logo: whether or not the logo should be printed after the screen is cleared
+        """
         if platform.system() == 'Windows':
             os.system('cls')
         else:
