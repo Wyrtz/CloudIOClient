@@ -40,7 +40,7 @@ class ServComs():
             return False
         return self.__hash__() == other.__hash__()
 
-    def send_file(self, file_path: pl.Path, additional_data) -> None: # Todo: type of additioanl data ??
+    def send_file(self, file_path: pl.Path, additional_data: dict) -> None:
         """Send provided filename to the server
 
         Args:
@@ -48,7 +48,6 @@ class ServComs():
             additional_data: the additional data (nonce, time +) for the file
         """
         # ToDo: send as stream for big files (otherwise memory error). Tested up to 300mb works
-        # TODO: Consider adding upload verification (have server return receipts)?
         with open(file_path, 'rb') as file:
             response = requests.post('https://' + self.serverLocation + '/upload_file/' + self.userID,
                                      files={'file_content': file,

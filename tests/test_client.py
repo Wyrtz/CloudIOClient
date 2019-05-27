@@ -137,7 +137,6 @@ class TestClient(unittest.TestCase):
         new_pw = 'wertyuiosdfghj'
         client.replace_key_from_backup(shares[3:15], self.username, new_pw)
         self.client.kd.derive_key(new_pw)
-        # Todo: done ?? Assert nothing after replacing key ?
 
     def test_replacing_pw_syncs_files(self):
         """Test that replacing the passwords makes all the files available under the new password (they are synced)"""

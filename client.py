@@ -236,7 +236,7 @@ class Client:
             share_amount: How many shares to split the password (secret) into
 
         Returns:
-            list: a list of lists, where each sublist is a (x,y) coordinate along with the shares needed to recover # ToDO: correct ?
+            list: a list of lists, where each sublist is a (x,y) coordinate along with the shares needed to recover
         """
         key = self.kd.derive_key(password)
         try:
@@ -269,7 +269,10 @@ class Client:
             print("Failed somehow!")
             return
         # Use the information of the first file to find the name of the shared folder
-        folder_name = pl.Path(dec_file_rel_path.parts[0]) / dec_file_rel_path.parts[1]  # TODO: Bad folder name!!!
+        folder_name = pl.Path(dec_file_rel_path.parts[0]) / dec_file_rel_path.parts[1]
+        if ".." in folder_name.as_posix():
+            print("Only descending file names are allowed!")
+            return
         self.save_shared_key(folder_name, key)
         # Save the key and sync
         self.folder_to_file_crypt_servercoms_dict[folder_name.as_posix()] = (file_crypt, servercoms)

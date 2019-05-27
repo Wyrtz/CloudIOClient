@@ -43,6 +43,7 @@ class FFInt:
             raise AssertionError
         return self * other.inverse
 
+    @property
     def inverse(self):
         """The inverse of self.value in this field
 

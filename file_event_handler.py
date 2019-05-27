@@ -41,9 +41,9 @@ class MyHandler(FileSystemEventHandler):
         relative_file_path = file_path.relative_to(globals.WORK_DIR)
         print("File created: " + str(relative_file_path))
         # Check if the just created file was downloaded (then don't send it back)
-        if relative_file_path in globals.DOWNLOADED_FILE_QUEUE:
-            globals.DOWNLOADED_FILE_QUEUE.remove(relative_file_path)
-            return
+        #if relative_file_path in globals.DOWNLOADED_FILE_QUEUE:
+        #    globals.DOWNLOADED_FILE_QUEUE.remove(relative_file_path)
+        #    return
         self.new_files[relative_file_path] = time.time()
         self.client.send_file(file_path)
 
@@ -111,4 +111,3 @@ class MyHandler(FileSystemEventHandler):
 
     # Todo: on_ rename file ?? (move event ??) (Saving file on unix can be a move event)
     # TODO: CLI's cmd 'df _' on only local.
-    # TODO: Fix get_file - Make observers turn off temporarily.

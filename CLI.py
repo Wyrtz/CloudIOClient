@@ -151,10 +151,10 @@ class CLI:
                 self.get_or_delete_avaliable = True
                 print("Remote files:")
                 self.print_remote_files()
-            elif command == "diff" or command == "d":  # TODO: Run past Sofus
+            elif command == "diff" or command == "d":
                 self.get_or_delete_avaliable = True
                 self.name_list = self.print_diff_to_server()
-            elif command == "ss" or command == "sync_status":  # TODO: Run past Sofus
+            elif command == "ss" or command == "sync_status":
                 self.get_or_delete_avaliable = True
                 sync_dict = self.client.generate_sync_dict()
                 self.name_list = list(sync_dict)
@@ -212,11 +212,11 @@ class CLI:
             command: input from the user on string form
             file_rel_path: the file in question to either get or delete
         """
-        error_message = f"{Fore.RED}Provide what file (number) you want"  # TODO: Remove?
+        error_message = f"{Fore.RED}Provide what file (number) you want"  # TODO: Remove? idx out of bound ??
         exists_remotely = file_rel_path in list(globals.SERVER_FILE_DICT)
         exists_locally = pl.Path.exists(file_rel_path)
 
-        if command == "gf" or command == "get":  # TODO: Run by Sofus
+        if command == "gf" or command == "get":
             if not exists_remotely:
                 print("File doesn't exist remotely.")
                 return True
@@ -224,7 +224,7 @@ class CLI:
             self.client.get_file(file_rel_path)
             return True
 
-        if command == 'df' or command == "del":  # TODO: Run by Sofus
+        if command == 'df' or command == "del":
             if exists_locally:
                 answer = input("Delete local file? (y,n)")
                 answer = answer.lower()
@@ -238,7 +238,7 @@ class CLI:
 
     def replace_pw_using_shares(self):
         """Replace username and password from shares"""
-        shares_input = self.get_shares_from_user()  # TODO: Fix bug (expects more than necesary.)
+        shares_input = self.get_shares_from_user()
         has_new_pw = False
         while not has_new_pw:
             username = input("Select a username. (Can pick new or the same)")
@@ -263,7 +263,8 @@ class CLI:
         """Run the loop of acquiring shares for Shamirs Secret Sharing Scheme from the user
 
         Returns:
-            list: list of lists, with each sublist containing a shares x,y coordinate and the number of shares #toDo: last part it contains ?
+            list: list of lists, with each sublist containing a shares x,y coordinate and the # of secrets you can
+            have without restoring the secret
         """
         shares_input = []
         amount_needed = -1
@@ -390,7 +391,7 @@ class CLI:
             print("That's not a valid amount of shares to recover from.")
             print("Should be > 0 and < total amount of shares. Exiting backup.")
             return
-        password = getpass("Type in your password to confirm.") # ToDO: Check if this is the correct password ?!
+        password = getpass("Type in your password to confirm.")
         shares = self.client.backup_key(password, to_recover_from, total)
         if len(shares) == 0:
             print("No shares were produced.")

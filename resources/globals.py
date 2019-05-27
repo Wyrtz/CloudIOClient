@@ -116,7 +116,7 @@ TEST_FILE_FOLDER = pl.Path.joinpath(WORK_DIR, "files_for_testing")
 FILE_FOLDER = pl.Path.joinpath(WORK_DIR, "files")
 TEMPORARY_FOLDER = pl.Path.joinpath(WORK_DIR, "tmp")
 create_file_folders()
-DOWNLOADED_FILE_QUEUE = []
+# DOWNLOADED_FILE_QUEUE = []
 SERVER_LOCATION = 'wyrnas.myqnapcloud.com:8001'
 KEY_HASHES = pl.Path.joinpath(RESOURCE_DIR, 'key_hashes.txt')
 ENC_OLD_KEYS = pl.Path.joinpath(RESOURCE_DIR, 'enc_keys.txt')  # Should contain old key encryptions
