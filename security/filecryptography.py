@@ -148,7 +148,6 @@ class FileCryptography:
         #  Set access and modify as per additional data:
         file_last_mod = additional_data["t"]
         os.utime(str(dec_file_path), (file_last_mod, file_last_mod))
-        # globals.DOWNLOADED_FILE_QUEUE.append(dec_file_name)
         return dec_file_path
 
     def decrypt_server_file_list(self, enc_relative_path_list_with_nonces_and_timestamp: list) -> dict:

@@ -122,7 +122,6 @@ class Client:
             print("File not found on server.")
             return
         self.close_observers()
-        # globals.DOWNLOADED_FILE_QUEUE.append(file_name) # ToDo: Redundant ?
         file_crypt.decrypt_file(tmp_enc_file_path, additional_data=additional_data)
         pl.Path.unlink(tmp_enc_file_path)
         self.start_observing()
@@ -366,7 +365,7 @@ class Client:
         return dict
 
 
-def replace_key_from_backup(shares: list, username: str, new_pw: str) -> None:  # ToDo: Test this!!
+def replace_key_from_backup(shares: list, username: str, new_pw: str) -> None:
     """
     Replace the default encryption key from Shamir Secret Sharing Scheme shares
 
