@@ -9,7 +9,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 import requests
 
 from resources import globals
-from hashlib import sha3_224
+from hashlib import sha3_512
 
 
 class ServComs():
@@ -29,7 +29,7 @@ class ServComs():
         self.register_user()
 
     def __hash__(self):
-        hasher: sha3_224 = sha3_224()
+        hasher: sha3_512 = sha3_512()
         hasher.update(bytes(self.serverLocation, "utf-8"))
         hasher.update(bytes(self.userID, "utf-8"))
         hasher.update(bytes(self.cert, "utf-8"))

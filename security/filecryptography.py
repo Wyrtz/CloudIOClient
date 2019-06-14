@@ -3,7 +3,7 @@ import os
 import pathlib as pl
 import platform
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-from hashlib import sha3_224
+from hashlib import sha3_512
 
 from resources import globals
 
@@ -21,7 +21,7 @@ class FileCryptography:
             key: the key for all en(de)cryption
         """
         self.aesgcm = AESGCM(key=key)
-        hasher = sha3_224()
+        hasher = sha3_512()
         hasher.update(key)
         self.hash = hasher.digest().hex()
 

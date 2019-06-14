@@ -1,6 +1,6 @@
 import json
 import pathlib as pl
-from hashlib import sha3_224
+from hashlib import sha3_512
 from time import sleep
 
 from cryptography.exceptions import InvalidTag
@@ -23,7 +23,7 @@ def hash_key_to_userID(key: bytes) -> str:
     Returns:
         str: the hashed and hexed key
     """
-    hasher = sha3_224()
+    hasher = sha3_512()
     hasher.update(bytes("Keyhash", 'utf-8'))
     hasher.update(key)
     return hasher.digest().hex()
@@ -99,7 +99,7 @@ class Client:
         pl.Path.unlink(enc_file_path)  # Delete the encrypted file
         relative_path = file_path.relative_to(globals.WORK_DIR)
         relative_enc_path = enc_file_path.relative_to(globals.TEMPORARY_FOLDER)
-        print("File\"" + file_path.stem + "\"send successfully!")
+        print("File \"" + file_path.stem + "\" send successfully!")
         # Update our local version of the server files
         fio = globals.FileInfo(relative_path, file_name_nonce, relative_enc_path.as_posix(), file_path.stat().st_mtime)
         globals.SERVER_FILE_DICT[fio.path] = fio
@@ -118,12 +118,16 @@ class Client:
             return
         try:
             tmp_enc_file_path, additional_data = servercoms.get_file(fio.enc_path)
+            if not additional_data["n"] == fio.enc_path:
+                print("Server send wrong file back!")
+                return
         except FileNotFoundError:
             print("File not found on server.")
             return
         self.close_observers()
         file_crypt.decrypt_file(tmp_enc_file_path, additional_data=additional_data)
         pl.Path.unlink(tmp_enc_file_path)
+        print("File \"" + str(file_name) + "\" received successfully!")
         self.start_observing()
 
     def delete_remote_file(self, file_rel_path: pl.Path):
